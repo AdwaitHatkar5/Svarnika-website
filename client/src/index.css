@@ -114,7 +114,31 @@
         6px 6px 12px rgba(0,0,0,0.35);
   }
 
-  .title-shine::before {
+  .subtitle-shine {
+    @apply relative overflow-hidden;
+    text-transform: uppercase;
+    font-family: "Cinzel", serif;
+    font-weight: 700;
+    letter-spacing: 0.6em;
+    background: linear-gradient(
+        180deg,
+        #fff4c2 0%,
+        #f5d76e 15%,
+        #e6b85c 30%,
+        #c89b3c 45%,
+        #ffd97a 60%,
+        #b8892b 75%,
+        #8d6b1f 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow:
+        1px 1px 0 #9e7c19,
+        1px 2px 0 #8c6a12,
+        4px 4px 8px rgba(0,0,0,0.3);
+  }
+
+  .subtitle-shine::before {
     content: '';
     position: absolute;
     top: 0;

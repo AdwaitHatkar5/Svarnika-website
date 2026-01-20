@@ -33,7 +33,7 @@ export default function Home() {
             <h1 className="title-shine text-5xl md:text-7xl lg:text-8xl leading-none mb-6 w-[120%] -ml-[10%] pr-[0.25em]">
               SVARNIKAA
             </h1>
-            <p className="font-sans text-[13px] md:text-[15px] tracking-[0.5em] uppercase text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F9E498] to-[#D4AF37] font-bold drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]">
+            <p className="subtitle-shine text-[11px] md:text-[13px] leading-relaxed">
               Exclusively Royale.
             </p>
           </motion.div>
