@@ -30,7 +30,28 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
           >
-            <h1 className="font-sans text-5xl md:text-7xl lg:text-8xl text-heading font-bold tracking-[0.2em] leading-none mb-6 uppercase">
+            <h1 
+              className="font-serif text-5xl md:text-7xl lg:text-8xl font-bold tracking-[0.2em] leading-none mb-6 uppercase"
+              style={{
+                color: '#D4AF37',
+                textShadow: `
+                  1px 1px 0px #b18f2b,
+                  1px 2px 0px #b18f2b,
+                  1px 3px 0px #b18f2b,
+                  1px 4px 0px #b18f2b,
+                  1px 5px 0px #b18f2b,
+                  1px 6px 0px #917523,
+                  1px 7px 0px #917523,
+                  1px 8px 0px #917523,
+                  1px 9px 0px #917523,
+                  1px 10px 0px #917523,
+                  1px 18px 6px rgba(16,16,16,0.4),
+                  1px 22px 10px rgba(16,16,16,0.2),
+                  1px 25px 35px rgba(16,16,16,0.2),
+                  1px 30px 60px rgba(16,16,16,0.4)
+                `
+              }}
+            >
               Svarnikaa
             </h1>
             <p className="font-sans text-[13px] md:text-[15px] tracking-[0.5em] uppercase text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F9E498] to-[#D4AF37] font-bold drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]">
