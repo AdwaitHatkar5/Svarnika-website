@@ -86,14 +86,56 @@
   --ring: 217 91% 58%; /* Royal Blue ring */
 }
 
-@layer base {
-  * {
-    @apply border-border;
+@layer utilities {
+  .title-shine {
+    @apply relative overflow-hidden;
+    text-transform: uppercase;
+    font-family: "Cinzel", serif;
+    font-size: 6em;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    background: linear-gradient(
+        180deg,
+        #fff4c2 0%,
+        #f5d76e 15%,
+        #e6b85c 30%,
+        #c89b3c 45%,
+        #ffd97a 60%,
+        #b8892b 75%,
+        #8d6b1f 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow:
+        1px 1px 0 #9e7c19,
+        2px 2px 0 #8c6a12,
+        3px 3px 0 #7a5a0f,
+        4px 4px 0 #684a0c,
+        6px 6px 12px rgba(0,0,0,0.35);
   }
-  body {
-    @apply font-sans antialiased bg-[#c4c4c4] text-foreground;
+
+  .title-shine::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -40%;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(
+        120deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.75) 45%,
+        rgba(255,255,255,0.0) 55%
+    );
+    animation: goldShine 4.5s ease-in-out infinite;
+    mix-blend-mode: screen;
+    pointer-events: none;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-serif text-heading tracking-wide;
+
+  @keyframes goldShine {
+    0%   { left: -40%; }
+    35%  { left: 30%; }
+    65%  { left: 70%; }
+    100% { left: 120%; }
   }
 }
