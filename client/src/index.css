@@ -81,11 +81,11 @@
   .title-shine {
     text-transform: uppercase;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 130px;
+    font-size: 100px;
     font-weight: 800;
     letter-spacing: 0.25em;
-    color: #edaf13;
-    text-shadow: 0px 0px 0 rgb(232,170,14),
+    color: #BA8500;
+    text-shadow: 0px 0px 0 #BA8500,
                  1px 1px 0 rgb(227,165,9),
                  2px 2px 0 rgb(222,160,4),
                  3px 3px 0 rgb(217,155,0),
