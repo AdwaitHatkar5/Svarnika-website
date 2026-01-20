@@ -79,9 +79,11 @@
 
 @layer utilities {
   .title-shine {
-    font-size: 97px;
+    font-size: 120px;
     color: #d3af37;
-    font-family: Verdana, Geneva, sans-serif;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    line-height: 1;
     text-shadow: 0px 0px 0 rgb(206,170,50),
                  1px 1px 0 rgb(201,165,45),
                  2px 2px 0 rgb(196,160,40),
