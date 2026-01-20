@@ -81,21 +81,21 @@
   .title-shine {
     text-transform: uppercase;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 100px;
+    font-size: 97px;
     font-weight: 800;
     letter-spacing: 0.25em;
-    color: #BA8500;
-    text-shadow: 0px 0px 0 #BA8500,
-                 1px 1px 0 rgb(227,165,9),
-                 2px 2px 0 rgb(222,160,4),
-                 3px 3px 0 rgb(217,155,0),
-                 4px 4px 0 rgb(212,150,0),
-                 5px 5px 0 rgb(207,145,0),
-                 6px 6px 0 rgb(202,140,0),
-                 7px 7px 0 rgb(197,135,0),
-                 8px 8px 0 rgb(192,130,0),
-                 9px 9px 0 rgb(187,125,0),
-                 10px 10px  0 rgb(182,120,0),
+    color: #d3af37;
+    text-shadow: 0px 0px 0 rgb(206,170,50),
+                 1px 1px 0 rgb(201,165,45),
+                 2px 2px 0 rgb(196,160,40),
+                 3px 3px 0 rgb(191,155,35),
+                 4px 4px 0 rgb(186,150,30),
+                 5px 5px 0 rgb(181,145,25),
+                 6px 6px 0 rgb(176,140,20),
+                 7px 7px 0 rgb(171,135,15),
+                 8px 8px 0 rgb(166,130,10),
+                 9px 9px 0 rgb(161,125,5),
+                 10px 10px  0 rgb(156,120,0),
                  11px 11px 10px rgba(0,0,0,0.6),
                  11px 11px 1px rgba(0,0,0,0.5),
                  0px 0px 10px rgba(0,0,0,.2);
