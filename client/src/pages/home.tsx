@@ -33,8 +33,9 @@ export default function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full flex justify-center"
           >
-            <h1 className="title-shine text-5xl md:text-7xl lg:text-8xl leading-none mb-6 w-[120%] -ml-[10%] pr-[0.25em]">
+            <h1 className="title-shine">
               SVARNIKAA
             </h1>
           </motion.div>
