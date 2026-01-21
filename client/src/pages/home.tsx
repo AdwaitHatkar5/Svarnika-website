@@ -62,7 +62,7 @@ export default function Home() {
       </section>
 
       {/* Product Grid Section */}
-      <section className="py-32 px-6 bg-[#c4c4c4]">
+      <section className="py-32 px-6 bg-[#403307]">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
             {products.map((product) => (
