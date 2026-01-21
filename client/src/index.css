@@ -131,18 +131,11 @@
       #fdfbf0 55%,
       #d3af37 100%
     );
-    background-size: 200% 100%;
-    animation: shine-gold 3s linear infinite;
     color: #1a1608;
     font-weight: 700;
     border: 1px solid rgba(211, 175, 55, 0.4);
     box-shadow: 0 4px 15px rgba(211, 175, 55, 0.2);
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-  }
-
-  @keyframes shine-gold {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
   }
 }
 
