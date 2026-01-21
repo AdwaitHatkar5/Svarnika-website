@@ -69,7 +69,7 @@ export default function Home() {
                   <div className="mt-auto">
                     <button 
                       onClick={() => setSelectedProduct(product)}
-                      className="w-full py-3 px-6 bg-gray-900 text-white rounded font-serif uppercase tracking-widest text-sm hover:bg-gray-800 transition-colors"
+                      className="w-full py-3 px-6 bg-[#fdfbf0] text-[#d3af37] border border-[#d3af37]/10 rounded font-serif uppercase tracking-widest text-sm hover:bg-[#f9f5d7] transition-colors"
                       data-testid={`button-order-${product.id}`}
                     >
                       Order
