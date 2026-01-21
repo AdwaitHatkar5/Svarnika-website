@@ -41,27 +41,46 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Narrative Section */}
+      <section className="h-screen flex items-center justify-center px-6 container mx-auto text-center snap-start">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 2 }}
+          className="max-w-4xl mx-auto space-y-12"
+        >
+          <h2 className="font-serif text-4xl md:text-7xl text-heading leading-tight">
+            A Journey into <br /> Handcrafted Grace
+          </h2>
+          <p className="text-xl md:text-2xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto">
+            <br />
+            We curate heritage for those who know <br />
+            the elegance of true luxury.
+          </p>
+        </motion.div>
+      </section>
+
       {/* Product Grid Section */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-32 px-6 bg-[#c4c4c4]">
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white border border-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
+                className="bg-white border border-black/5 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col group"
                 data-testid={`card-product-${product.id}`}
               >
                 <div className="aspect-square overflow-hidden bg-gray-50">
                   <img 
                     src={product.image} 
                     alt={product.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     data-testid={`img-product-${product.id}`}
                   />
                 </div>
-                <div className="p-6 flex flex-col flex-grow">
+                <div className="p-8 flex flex-col flex-grow">
                   <h3 
-                    className="font-serif text-xl text-gray-900 mb-4"
+                    className="font-serif text-2xl text-gray-900 mb-6"
                     data-testid={`text-name-${product.id}`}
                   >
                     {product.name}
@@ -69,7 +88,7 @@ export default function Home() {
                   <div className="mt-auto">
                     <button 
                       onClick={() => setSelectedProduct(product)}
-                      className="button-shining-gold w-full py-3 px-6 rounded font-serif uppercase tracking-widest text-sm transition-transform active:scale-95"
+                      className="button-shining-gold w-full py-4 px-6 rounded-xl font-serif uppercase tracking-widest text-sm transition-transform active:scale-95 shadow-lg"
                       data-testid={`button-order-${product.id}`}
                     >
                       Order
@@ -89,7 +108,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-6"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-6"
           >
             <button 
               onClick={() => setSelectedProduct(null)}
@@ -121,25 +140,6 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Narrative Section */}
-      <section className="h-screen flex items-center justify-center px-6 container mx-auto text-center snap-start">
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 2 }}
-          className="max-w-4xl mx-auto space-y-12"
-        >
-          <h2 className="font-serif text-4xl md:text-7xl text-heading leading-tight">
-            A Journey into <br /> Handcrafted Grace
-          </h2>
-          <p className="text-xl md:text-2xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto">
-            <br />
-            We curate heritage for those who know <br />
-            the elegance of true luxury.
-          </p>
-        </motion.div>
-      </section>
 
     </Layout>
   );
