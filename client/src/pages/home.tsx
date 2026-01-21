@@ -1,12 +1,16 @@
 import { Layout } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
 import { assets, products } from "@/lib/data";
-import { motion } from "framer-motion";
-import { ShieldCheck, Leaf, Crown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldCheck, Leaf, Crown, X } from "lucide-react";
+import { useState } from "react";
+import qrPlaceholder from "@assets/stock_images/luxury_gold_qr_code__badcc23b.jpg";
 
 import pendantNecklace from "@assets/generated_images/small_diamond_emerald_pendant_necklace.png";
 
 export default function Home() {
+  const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -64,6 +68,7 @@ export default function Home() {
                   </h3>
                   <div className="mt-auto">
                     <button 
+                      onClick={() => setSelectedProduct(product)}
                       className="w-full py-3 px-6 bg-gray-900 text-white rounded font-serif uppercase tracking-widest text-sm hover:bg-gray-800 transition-colors"
                       data-testid={`button-order-${product.id}`}
                     >
@@ -76,6 +81,46 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* QR Code Modal */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-6"
+          >
+            <button 
+              onClick={() => setSelectedProduct(null)}
+              className="absolute top-10 right-10 text-white hover:rotate-90 transition-transform duration-500"
+            >
+              <X size={32} strokeWidth={1} />
+            </button>
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1a1608] p-12 border border-white/10 rounded-3xl max-w-sm w-full text-center space-y-8 shadow-2xl"
+            >
+              <div className="space-y-2">
+                <h3 className="font-serif text-3xl text-white">Scan to Order</h3>
+                <p className="text-gray-400 text-sm font-light">Experience the royale concierge service</p>
+              </div>
+              <div className="relative aspect-square w-full bg-white p-6 rounded-2xl flex items-center justify-center group overflow-hidden">
+                <img 
+                  src={qrPlaceholder} 
+                  alt="Order QR Code" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="pt-4">
+                <p className="text-[10px] text-[#d3af37] uppercase tracking-[0.3em] font-bold">Svarnikaa Royale Concierge</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Narrative Section */}
       <section className="h-screen flex items-center justify-center px-6 container mx-auto text-center snap-start">
