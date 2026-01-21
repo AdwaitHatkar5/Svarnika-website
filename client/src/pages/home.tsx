@@ -37,6 +37,46 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Product Grid Section */}
+      <section className="py-20 px-6 bg-white">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {products.map((product) => (
+              <div 
+                key={product.id} 
+                className="bg-white border border-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
+                data-testid={`card-product-${product.id}`}
+              >
+                <div className="aspect-square overflow-hidden bg-gray-50">
+                  <img 
+                    src={product.image} 
+                    alt={product.name}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    data-testid={`img-product-${product.id}`}
+                  />
+                </div>
+                <div className="p-6 flex flex-col flex-grow">
+                  <h3 
+                    className="font-serif text-xl text-gray-900 mb-4"
+                    data-testid={`text-name-${product.id}`}
+                  >
+                    {product.name}
+                  </h3>
+                  <div className="mt-auto">
+                    <button 
+                      className="w-full py-3 px-6 bg-gray-900 text-white rounded font-serif uppercase tracking-widest text-sm hover:bg-gray-800 transition-colors"
+                      data-testid={`button-order-${product.id}`}
+                    >
+                      Order
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Narrative Section */}
       <section className="h-screen flex items-center justify-center px-6 container mx-auto text-center snap-start">
         <motion.div
@@ -56,53 +96,6 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* The Curated Series */}
-      <div className="snap-y snap-mandatory">
-        {products.map((product) => (
-          <div key={product.id} className="snap-start">
-            <ProductCard product={product} />
-          </div>
-        ))}
-      </div>
-
-      {/* Feature Highlights - Reduced Presence 
-      <section className="py-48 px-6 bg-background snap-start">
-        <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-24 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-            className="flex flex-col items-center space-y-6"
-          >
-            <ShieldCheck className="text-primary w-6 h-6" strokeWidth={0.5} />
-            <h3 className="font-serif text-xl text-heading tracking-widest uppercase">
-              Purity
-            </h3>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.2 }}
-            className="flex flex-col items-center space-y-6"
-          >
-            <Leaf className="text-primary w-6 h-6" strokeWidth={0.5} />
-            <h3 className="font-serif text-xl text-heading tracking-widest uppercase">
-              Ethics
-            </h3>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.4 }}
-            className="flex flex-col items-center space-y-6"
-          >
-            <Crown className="text-primary w-6 h-6" strokeWidth={0.5} />
-            <h3 className="font-serif text-xl text-heading tracking-widest uppercase">
-              Legacy
-            </h3>
-          </motion.div>
-        </div>
-      </section>*/}
     </Layout>
   );
 }
