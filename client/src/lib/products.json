@@ -1,12 +1,12 @@
 [
   {
     "id": 1,
-    "name": "Royal Kundan Choker",
+    "name": "Royal Kundan Test-1",
     "metal": "Gold Plated",
     "weight": "48g",
     "price": "₹4,500",
     "description": "Handcrafted antique finish with high-quality kundan stones.",
-    "image": "/generated_images/gold_choker_necklace.png"
+    "image": "/generated_images/gold_diamond_earrings.png"
   },
   {
     "id": 2,
@@ -15,7 +15,7 @@
     "weight": "12g",
     "price": "₹2,800",
     "description": "Premium Cubic Zirconia diamonds in a classic drop design.",
-    "image": "/generated_images/gold_diamond_earrings.png"
+    "image": "/generated_images/gold_choker_necklace.png"
   },
   {
     "id": 3,
@@ -37,6 +37,15 @@
   },
   {
     "id": 5,
+    "name": "Sapphire Statement Ring",
+    "metal": "Gold Plated & Crystal",
+    "weight": "8g",
+    "price": "₹1,500",
+    "description": "Deep royal blue crystal set in polished gold plating.",
+    "image": "/generated_images/gold_ring_with_sapphires.png"
+  },
+  {
+    "id": 6,
     "name": "Sapphire Statement Ring",
     "metal": "Gold Plated & Crystal",
     "weight": "8g",
