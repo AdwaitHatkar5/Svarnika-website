@@ -1,6 +1,7 @@
 import { Layout } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
-import { assets, products } from "@/lib/data";
+import { assets } from "@/lib/data";
+import products from "@/lib/products.json";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Leaf, Crown, X } from "lucide-react";
 import { useState } from "react";
