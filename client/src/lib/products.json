@@ -6,7 +6,7 @@
     "weight": "48g",
     "price": "₹4,500",
     "description": "Handcrafted antique finish with high-quality kundan stones.",
-    "image": "/src/assets/generated_images/gold_choker_necklace.png"
+    "image": "/attached_assets/generated_images/gold_choker_necklace.png"
   },
   {
     "id": 2,
@@ -15,7 +15,7 @@
     "weight": "12g",
     "price": "₹2,800",
     "description": "Premium Cubic Zirconia diamonds in a classic drop design.",
-    "image": "/src/assets/generated_images/gold_diamond_earrings.png"
+    "image": "/attached_assets/generated_images/gold_diamond_earrings.png"
   },
   {
     "id": 3,
@@ -24,7 +24,7 @@
     "weight": "35g",
     "price": "₹3,200",
     "description": "Intricate filigree work inspired by Royal Rajasthani art.",
-    "image": "/src/assets/generated_images/gold_bangle_bracelet.png"
+    "image": "/attached_assets/generated_images/gold_bangle_bracelet.png"
   },
   {
     "id": 4,
@@ -33,7 +33,7 @@
     "weight": "52g",
     "price": "₹5,500",
     "description": "Traditional temple jewelry featuring sacred coin motifs.",
-    "image": "/src/assets/generated_images/luxury_gold_necklace_hero_shot.png"
+    "image": "/attached_assets/generated_images/luxury_gold_necklace_hero_shot.png"
   },
   {
     "id": 5,
@@ -42,6 +42,6 @@
     "weight": "8g",
     "price": "₹1,500",
     "description": "Deep royal blue crystal set in polished gold plating.",
-    "image": "/src/assets/generated_images/gold_ring_with_sapphires.png"
+    "image": "/attached_assets/generated_images/gold_ring_with_sapphires.png"
   }
 ]
