@@ -7,7 +7,7 @@ import { ShieldCheck, Leaf, Crown, X } from "lucide-react";
 import { useState } from "react";
 import qrPlaceholder from "@assets/stock_images/luxury_gold_qr_code__badcc23b.jpg";
 
-import pendantNecklace from "@assets/generated_images/small_diamond_emerald_pendant_necklace.png";
+import logoTitle from "@assets/SVARNIKAA-23-01-2026_1769178809917.png";
 
 export default function Home() {
   const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
@@ -36,9 +36,11 @@ export default function Home() {
             transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
             className="w-full flex justify-center"
           >
-            <h1 className="title-shine">
-              SVARNIKAA
-            </h1>
+            <img 
+              src={logoTitle} 
+              alt="SVARNIKAA" 
+              className="w-full max-w-4xl h-auto drop-shadow-[0_0_30px_rgba(211,175,55,0.3)]"
+            />
           </motion.div>
         </div>
       </section>
