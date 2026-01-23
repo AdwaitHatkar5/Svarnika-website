@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Leaf, Crown, X } from "lucide-react";
 import { useState } from "react";
 import qrPlaceholder from "@assets/stock_images/luxury_gold_qr_code__badcc23b.jpg";
-
+import pendantNecklace from "@assets/generated_images/small_diamond_emerald_pendant_necklace.png";
 import logoTitle from "@assets/SVARNIKAA-23-01-2026_1769178809917.png";
 
 export default function Home() {
