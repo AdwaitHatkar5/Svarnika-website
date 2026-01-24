@@ -39,7 +39,7 @@ export default function Home() {
             <img 
               src={logoTitle} 
               alt="SVARNIKAA" 
-              className="w-full max-w-[60rem] h-auto drop-shadow-[0_0_30px_rgba(211,175,55,0.3)]"
+              className="w-full max-w-[63rem] h-auto drop-shadow-[0_0_30px_rgba(211,175,55,0.3)]"
             />
           </motion.div>
         </div>
