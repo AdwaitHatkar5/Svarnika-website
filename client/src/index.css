@@ -79,7 +79,7 @@
 
 @layer utilities {
   .title-shine {
-    font-size: clamp(3rem, 10vw, 7.5rem);
+    font-size: clamp(3.6rem, 12vw, 9rem);
     color: #FFDF0B;
     font-family: 'Cormorant Garamond', serif;
     font-weight: 700;
@@ -95,7 +95,7 @@
     font-weight: 700;
     letter-spacing: 0.6em;
     color: #FFDF0B;
-    font-size: 30px;
+    font-size: 21px;
     text-shadow: none;
   }
   .button-shining-gold {
