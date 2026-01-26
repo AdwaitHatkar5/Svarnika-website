@@ -99,19 +99,15 @@
     text-shadow: none;
   }
   .button-shining-gold {
-    background: linear-gradient(
-      110deg,
-      #d3af37 0%,
-      #fdfbf0 45%,
-      #ffffff 50%,
-      #fdfbf0 55%,
-      #d3af37 100%
-    );
+    background: #FFDF0B;
     color: #1a1608;
-    font-weight: 700;
-    border: 1px solid rgba(211, 175, 55, 0.4);
-    box-shadow: 0 4px 15px rgba(211, 175, 55, 0.2);
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+    font-weight: 900;
+    font-size: 1.1em;
+    border: 1px solid rgba(255, 223, 11, 0.4);
+    box-shadow: 0 4px 15px rgba(255, 223, 11, 0.2);
+    text-shadow: none;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
   }
 }
 
