@@ -39,7 +39,7 @@ export default function Home() {
             <h1 className="title-shine">
               SVARNIKAA
             </h1>
-            <p className="subtitle-shine text-sm md:text-base mt-2">
+            <p className="subtitle-shine mt-4">
               Exclusively Royale
             </p>
           </motion.div>
