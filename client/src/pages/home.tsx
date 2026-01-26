@@ -72,10 +72,10 @@ export default function Home() {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white border border-black/5 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col group"
+                className="bg-white border border-black/5 rounded-none overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col group"
                 data-testid={`card-product-${product.id}`}
               >
-                <div className="aspect-square overflow-hidden bg-gray-50">
+                <div className="aspect-square overflow-hidden bg-white p-[25px]">
                   <img 
                     src={product.image} 
                     alt={product.name}
@@ -93,7 +93,7 @@ export default function Home() {
                   <div className="mt-auto">
                     <button 
                       onClick={() => setSelectedProduct(product)}
-                      className="button-shining-gold w-full py-4 px-6 rounded-xl font-serif uppercase tracking-widest text-sm transition-transform active:scale-95 shadow-lg"
+                      className="button-shining-gold w-full py-4 px-6 rounded-none font-serif uppercase tracking-widest text-sm transition-transform active:scale-95 shadow-lg"
                       data-testid={`button-order-${product.id}`}
                     >
                       Order
