@@ -29,18 +29,19 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background" />
         </div>
 
-        <div className="relative z-10 text-center space-y-6 max-w-3xl px-6 -translate-y-[15px]">
+        <div className="relative z-10 text-center space-y-4 max-w-3xl px-6 -translate-y-[15px]">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full flex justify-center"
+            className="w-full flex flex-col items-center"
           >
-            <img 
-              src={logoTitle} 
-              alt="SVARNIKAA" 
-              className="w-full max-w-[63rem] h-auto drop-shadow-[0_0_30px_rgba(211,175,55,0.3)]"
-            />
+            <h1 className="title-shine">
+              SVARNIKAA
+            </h1>
+            <p className="subtitle-shine text-sm md:text-base mt-2">
+              Exclusively Royale
+            </p>
           </motion.div>
         </div>
       </section>
