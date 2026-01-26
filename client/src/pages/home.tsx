@@ -21,7 +21,7 @@ export default function Home() {
             <img
               src={pendantNecklace}
               alt="Luxury Jewelry Background"
-              className="w-full h-full object-cover opacity-100 scale-[0.9] blur-[2px]"
+              className="w-full h-full object-cover opacity-100 scale-[0.9] blur-[15px]"
             />
             {/* Soft vignette/blur on edges */}
             <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(26,22,8,1)] pointer-events-none" />
