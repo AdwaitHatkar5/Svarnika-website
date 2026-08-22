@@ -1,87 +1,101 @@
 import { Link } from "wouter";
-import { Heart, Search, ShoppingBag, Instagram, Facebook, Twitter, Mail } from "lucide-react";
+import { Heart, Search, ShoppingBag, Instagram, Facebook, Twitter, Mail, Menu } from "lucide-react";
 import logoImg from "@assets/logo2_1767450148274.png";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-white/5 transition-all duration-300">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Mobile Menu Placeholder (Left) */}
-          <div className="w-1/4 md:hidden">
-            <span className="text-sm uppercase tracking-widest">Menu</span>
+      <header className="fixed left-0 right-0 top-0 z-50 border-b border-[#d7c7aa]/70 bg-[#fffdf8]/95 shadow-[0_10px_30px_rgba(47,39,27,0.05)] backdrop-blur-xl transition-all duration-300">
+        <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
+          <div className="flex w-1/4 items-center md:hidden">
+            <button
+              className="flex h-10 w-10 items-center justify-center border border-[#d8c5a6] text-[#3c3327] transition hover:border-[#9d7a31] hover:text-[#9d7a31]"
+              aria-label="Open menu"
+            >
+              <Menu size={18} strokeWidth={1.7} />
+            </button>
           </div>
 
-          {/* Desktop Left Spacer */}
-          <div className="hidden md:block w-1/4"></div>
+          <nav className="hidden w-1/4 items-center gap-7 text-sm font-medium text-[#5e5345] md:flex">
+            <a href="#collection" className="transition hover:text-[#9d7a31]">Collection</a>
+            <a href="#checkout" className="transition hover:text-[#9d7a31]">Checkout</a>
+          </nav>
 
-          {/* Logo (Center) */}
-          <div className="w-2/4 flex justify-center">
+          <div className="flex w-2/4 justify-center">
             <Link href="/">
               <div 
-                className="group relative flex items-center justify-center transition-all duration-500 cursor-pointer" 
+                className="group relative flex cursor-pointer items-center gap-3 transition-all duration-500"
                 data-testid="link-home"
               >
-                <div className="relative w-16 h-16 flex items-center justify-center overflow-hidden rounded-lg">
+                <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[#d8c5a6] bg-white shadow-[0_10px_20px_rgba(87,66,35,0.08)]">
                   <img 
                     src={logoImg} 
                     alt="Svarnikaa Logo" 
-                    className="w-full h-full object-cover scale-110 [mask-image:radial-gradient(circle,black_70%,transparent_100%)]"
+                    className="h-full w-full scale-110 object-cover [mask-image:radial-gradient(circle,black_72%,transparent_100%)]"
                   />
+                </div>
+                <div className="hidden text-center sm:block">
+                  <p className="font-serif text-2xl font-semibold leading-none text-[#493723]">SVARNIKAA</p>
+                  <p className="mt-1 text-[10px] font-semibold uppercase text-[#9d7a31]">Jewellery Boutique</p>
                 </div>
               </div>
             </Link>
           </div>
 
-          {/* Icons (Right) */}
-          <div className="w-1/4 flex justify-end gap-6 text-heading">
-            <button className="hover:text-white transition-colors" data-testid="icon-search">
-              <Search strokeWidth={1.5} size={20} />
+          <div className="flex w-1/4 justify-end gap-2 text-[#3c3327]">
+            <button className="flex h-10 w-10 items-center justify-center border border-transparent transition hover:border-[#d8c5a6] hover:text-[#9d7a31]" data-testid="icon-search" aria-label="Search">
+              <Search strokeWidth={1.7} size={18} />
+            </button>
+            <button className="hidden h-10 w-10 items-center justify-center border border-transparent transition hover:border-[#d8c5a6] hover:text-[#9d7a31] sm:flex" aria-label="Wishlist">
+              <Heart strokeWidth={1.7} size={18} />
+            </button>
+            <button className="hidden h-10 w-10 items-center justify-center border border-transparent transition hover:border-[#d8c5a6] hover:text-[#9d7a31] sm:flex" aria-label="Cart">
+              <ShoppingBag strokeWidth={1.7} size={18} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="relative">
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-background border-t border-white/5 pt-20 pb-10 mt-20">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left mb-16">
+      <footer className="border-t border-[#d7c7aa] bg-[#33291f] pb-10 pt-16 text-[#f6efe2]">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="mb-12 grid grid-cols-1 gap-10 text-center md:grid-cols-3 md:text-left">
             <div className="space-y-4">
-              <h4 className="font-serif text-xl text-heading tracking-widest">Contact</h4>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+              <h4 className="font-serif text-2xl text-[#f1d590]">Contact</h4>
+              <p className="text-sm leading-relaxed text-[#d8ccb8]">
                 +91 98765 43210<br/>
                 concierge@svarnikaa.com
               </p>
             </div>
             
-            <div className="space-y-4 flex flex-col items-center">
-              <h4 className="font-serif text-xl text-heading tracking-widest">Svarnikaa</h4>
-              <div className="flex gap-6 mt-2">
-                <a href="#" className="text-muted-foreground hover:text-heading transition-colors"><Instagram strokeWidth={1} size={20}/></a>
-                <a href="#" className="text-muted-foreground hover:text-heading transition-colors"><Facebook strokeWidth={1} size={20}/></a>
-                <a href="#" className="text-muted-foreground hover:text-heading transition-colors"><Twitter strokeWidth={1} size={20}/></a>
-                <a href="#" className="text-muted-foreground hover:text-heading transition-colors"><Mail strokeWidth={1} size={20}/></a>
+            <div className="flex flex-col items-center space-y-4">
+              <h4 className="font-serif text-2xl text-[#f1d590]">Svarnikaa</h4>
+              <p className="max-w-xs text-sm leading-6 text-[#d8ccb8]">
+                Premium artificial jewellery curated for weddings, gifting, and graceful everyday shine.
+              </p>
+              <div className="mt-2 flex gap-4">
+                <a href="#" className="flex h-10 w-10 items-center justify-center border border-white/15 text-[#d8ccb8] transition hover:border-[#f1d590] hover:text-[#f1d590]" aria-label="Instagram"><Instagram strokeWidth={1.4} size={18}/></a>
+                <a href="#" className="flex h-10 w-10 items-center justify-center border border-white/15 text-[#d8ccb8] transition hover:border-[#f1d590] hover:text-[#f1d590]" aria-label="Facebook"><Facebook strokeWidth={1.4} size={18}/></a>
+                <a href="#" className="flex h-10 w-10 items-center justify-center border border-white/15 text-[#d8ccb8] transition hover:border-[#f1d590] hover:text-[#f1d590]" aria-label="Twitter"><Twitter strokeWidth={1.4} size={18}/></a>
+                <a href="#" className="flex h-10 w-10 items-center justify-center border border-white/15 text-[#d8ccb8] transition hover:border-[#f1d590] hover:text-[#f1d590]" aria-label="Email"><Mail strokeWidth={1.4} size={18}/></a>
               </div>
             </div>
 
             <div className="space-y-4 md:text-right">
-              <h4 className="font-serif text-xl text-heading tracking-widest">Legal</h4>
-              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-                <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
-                <a href="#" className="hover:text-primary transition-colors">Shipping & Returns</a>
+              <h4 className="font-serif text-2xl text-[#f1d590]">Support</h4>
+              <div className="flex flex-col gap-2 text-sm text-[#d8ccb8]">
+                <a href="#" className="transition hover:text-[#f1d590]">Privacy Policy</a>
+                <a href="#" className="transition hover:text-[#f1d590]">Terms of Service</a>
+                <a href="#" className="transition hover:text-[#f1d590]">Shipping & Returns</a>
               </div>
             </div>
           </div>
           
-          <div className="border-t border-white/5 pt-8 text-center">
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">
+          <div className="border-t border-white/10 pt-8 text-center">
+            <p className="text-xs uppercase text-[#bfb29d]">
               &copy; {new Date().getFullYear()} Svarnikaa. All rights reserved.
             </p>
           </div>

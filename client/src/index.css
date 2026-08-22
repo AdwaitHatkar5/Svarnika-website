@@ -42,45 +42,45 @@
   --font-sans: 'Montserrat', sans-serif;
   --font-serif: 'Cormorant Garamond', serif;
   
-  --radius: 0rem; /* Sharp edges for luxury feel */
+  --radius: 0.25rem;
 }
 
 :root {
-  --background: 46 80% 14%; 
-  --foreground: 45 30% 90%; 
+  --background: 39 47% 95%;
+  --foreground: 31 28% 16%;
 
-  --card: 46 70% 12%; 
-  --card-foreground: 45 50% 85%;
+  --card: 0 0% 100%;
+  --card-foreground: 31 28% 16%;
 
-  --popover: 46 80% 14%;
-  --popover-foreground: 45 30% 90%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 31 28% 16%;
 
-  --primary: 45 60% 60%; 
-  --primary-foreground: 45 60% 60%; 
+  --primary: 41 43% 46%;
+  --primary-foreground: 42 58% 96%;
 
-  --heading: 45 60% 60%; 
+  --heading: 33 35% 21%;
 
-  --secondary: 46 40% 20%; 
-  --secondary-foreground: 45 60% 80%;
+  --secondary: 39 39% 90%;
+  --secondary-foreground: 31 28% 16%;
 
-  --muted: 46 30% 20%;
-  --muted-foreground: 45 20% 60%;
+  --muted: 38 36% 90%;
+  --muted-foreground: 32 13% 42%;
 
-  --accent: 45 60% 60%; 
-  --accent-foreground: 46 80% 10%;
+  --accent: 42 45% 70%;
+  --accent-foreground: 31 28% 16%;
 
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 45 40% 25%; 
-  --input: 46 30% 20%;
-  --ring: 217 91% 58%; 
+  --border: 38 28% 78%;
+  --input: 38 28% 78%;
+  --ring: 41 43% 46%;
 }
 
 @layer utilities {
   .title-shine {
-    font-size: clamp(3.6rem, 12vw, 9rem);
-    color: #FFDF0B;
+    font-size: 5rem;
+    color: #9d7a31;
     font-family: 'Cormorant Garamond', serif;
     font-weight: 700;
     line-height: 1;
@@ -93,21 +93,19 @@
     text-transform: uppercase;
     font-family: "Cinzel", serif;
     font-weight: 700;
-    letter-spacing: 0.6em;
-    color: #FFDF0B;
-    font-size: 21px;
+    color: #9d7a31;
+    font-size: 1rem;
     text-shadow: none;
   }
   .button-shining-gold {
-    background: #FFDF0B;
-    color: #1a1608;
+    background: #9d7a31;
+    color: #fffaf0;
     font-weight: 900;
-    font-size: 1.1em;
-    border: 1px solid rgba(255, 223, 11, 0.4);
-    box-shadow: 0 4px 15px rgba(255, 223, 11, 0.2);
+    font-size: 1rem;
+    border: 1px solid rgba(157, 122, 49, 0.35);
+    box-shadow: 0 10px 24px rgba(90, 68, 35, 0.16);
     text-shadow: none;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
   }
 }
 
@@ -116,9 +114,9 @@
     @apply border-border;
   }
   body {
-    @apply font-sans antialiased bg-[#403307] text-foreground;
+    @apply bg-background font-sans text-foreground antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif text-heading tracking-wide;
+    @apply font-serif text-heading;
   }
 }
