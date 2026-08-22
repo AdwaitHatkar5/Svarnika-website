@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUpRight, ShoppingCart, X, QrCode } from "lucide-react";
+import { ArrowUpRight, X } from "lucide-react";
 import { useState } from "react";
 import qrPlaceholder from "@assets/stock_images/luxury_gold_qr_code__badcc23b.jpg";
 
@@ -42,7 +42,7 @@ export function ProductCard({ product }: ProductCardProps) {
           transition={{ duration: 1, delay: 0.5 }}
           className="text-[10px] text-primary uppercase tracking-[0.5em] font-light block"
         >
-          {product.metal} • {product.weight}
+          {[product.metal, product.weight].filter(Boolean).join(" | ")}
         </motion.span>
         
         <motion.h2 
