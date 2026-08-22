@@ -23,14 +23,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           <div className="flex w-2/4 justify-center">
             <Link href="/">
-              <div 
+              <div
                 className="group relative flex cursor-pointer items-center gap-3 transition-all duration-500"
                 data-testid="link-home"
               >
                 <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[#d8c5a6] bg-white shadow-[0_10px_20px_rgba(87,66,35,0.08)]">
-                  <img 
-                    src={logoImg} 
-                    alt="Svarnikaa Logo" 
+                  <img
+                    src={logoImg}
+                    alt="Svarnikaa Logo"
                     className="h-full w-full scale-110 object-cover [mask-image:radial-gradient(circle,black_72%,transparent_100%)]"
                   />
                 </div>
