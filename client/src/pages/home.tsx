@@ -378,6 +378,10 @@ export default function Home() {
                         <img
                           src={product.image}
                           alt={product.name}
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = pendantNecklace;
+                          }}
                           className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                         />
                         <div className="absolute left-3 top-3 border border-white/70 bg-white/90 px-3 py-1 text-xs font-semibold text-[#6a5838] backdrop-blur">
@@ -482,6 +486,10 @@ export default function Home() {
                           <img
                             src={item.image}
                             alt={item.name}
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = pendantNecklace;
+                            }}
                             className="h-16 w-16 bg-white object-cover"
                           />
                           <div className="min-w-0">

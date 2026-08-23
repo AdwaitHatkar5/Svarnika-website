@@ -110,12 +110,27 @@ export function productsFromCsv(csv: string): StoreProduct[] {
         weight: entry.weight || "",
         price: entry.price || entry.amount || "",
         description: entry.description || entry.details || "",
-        image: entry.image || entry.image_url || entry.photo || pendantNecklace,
+        image: normalizeImageUrl(entry.image || entry.image_url || entry.photo) || pendantNecklace,
         category: entry.category || "Jewellery",
         stock: entry.stock || entry.available || "In stock",
       };
     })
     .filter((product) => product.name && product.image);
+}
+
+function normalizeImageUrl(value: string) {
+  const imageUrl = value.trim();
+  if (!imageUrl) return "";
+
+  const driveFileId =
+    imageUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/)?.[1] ||
+    imageUrl.match(/[?&]id=([^&]+)/)?.[1];
+
+  if (driveFileId && imageUrl.includes("drive.google.com")) {
+    return `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1200`;
+  }
+
+  return imageUrl;
 }
 
 export function createOrderId() {

@@ -2,11 +2,25 @@ const INVENTORY_SHEET_NAME = "Inventory";
 const ORDERS_SHEET_NAME = "Orders";
 const OWNER_EMAIL_PROPERTY = "OWNER_EMAIL";
 
+function doGet() {
+  return healthCheck_();
+}
+
 function doPost(e) {
-  const payload = parsePayload_(e);
+  const parsed = parsePayload_(e);
+
+  if (parsed.error) {
+    return json_({ ok: false, error: parsed.error });
+  }
+
+  const payload = parsed.payload;
 
   if (!payload || !payload.action) {
     return json_({ ok: false, error: "Missing action" });
+  }
+
+  if (payload.action === "ping") {
+    return healthCheck_();
   }
 
   if (payload.action === "inventory") {
@@ -21,15 +35,25 @@ function doPost(e) {
 }
 
 function parsePayload_(e) {
-  if (e && e.parameter && e.parameter.payload) {
-    return JSON.parse(e.parameter.payload);
-  }
+  let rawPayload = "";
 
   if (e && e.postData && e.postData.contents) {
-    return JSON.parse(e.postData.contents);
+    rawPayload = e.postData.contents;
   }
 
-  return null;
+  if (e && e.parameter && e.parameter.payload) {
+    rawPayload = e.parameter.payload;
+  }
+
+  if (!rawPayload) {
+    return { payload: null };
+  }
+
+  try {
+    return { payload: JSON.parse(rawPayload) };
+  } catch (error) {
+    return { payload: null, error: "Invalid JSON payload" };
+  }
 }
 
 function saveInventory_(product) {
@@ -149,6 +173,17 @@ function json_(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
     ContentService.MimeType.JSON,
   );
+}
+
+function healthCheck_() {
+  return json_({
+    ok: true,
+    service: "Svarnikaa Google Apps Script",
+    actions: ["ping", "inventory", "order"],
+    inventorySheet: INVENTORY_SHEET_NAME,
+    ordersSheet: ORDERS_SHEET_NAME,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 function escapeHtml_(value) {
