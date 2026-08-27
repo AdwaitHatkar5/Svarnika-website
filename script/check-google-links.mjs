@@ -67,9 +67,11 @@ async function checkScript() {
   const response = await fetch(scriptUrl, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
     },
-    body: JSON.stringify({ action: "ping" }),
+    body: new URLSearchParams({
+      payload: JSON.stringify({ action: "ping" }),
+    }),
     redirect: "follow",
   });
   const text = await response.text();

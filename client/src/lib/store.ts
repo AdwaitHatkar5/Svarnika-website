@@ -20,6 +20,7 @@ export type CheckoutPayload = {
   action: "order";
   orderId: string;
   customerName: string;
+  customerEmail?: string;
   customerPhone: string;
   customerAddress: string;
   paymentRef: string;
@@ -38,6 +39,16 @@ export type InventoryPayload = {
   product: Omit<StoreProduct, "id"> & {
     id?: number | string;
   };
+};
+
+export type TrackingResponse = {
+  ok: boolean;
+  found?: boolean;
+  orderId?: string;
+  status?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  error?: string;
 };
 
 export const currency = new Intl.NumberFormat("en-IN", {
@@ -158,5 +169,46 @@ export function postToGoogleScript(
       "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
     },
     body,
+  });
+}
+
+export function fetchTrackingByOrderId(scriptUrl: string, orderId: string) {
+  const callbackName = `__svarnikaaTracking_${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2)}`;
+
+  const url = new URL(scriptUrl);
+  url.searchParams.set("action", "tracking");
+  url.searchParams.set("orderId", orderId);
+  url.searchParams.set("callback", callbackName);
+
+  return new Promise<TrackingResponse>((resolve, reject) => {
+    const script = document.createElement("script");
+    const callbacks = window as typeof window &
+      Record<string, (response: TrackingResponse) => void>;
+
+    function cleanup() {
+      window.clearTimeout(timeoutId);
+      delete callbacks[callbackName];
+      script.remove();
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Tracking lookup timed out"));
+    }, 10000);
+
+    callbacks[callbackName] = (response: TrackingResponse) => {
+      cleanup();
+      resolve(response);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Tracking lookup failed"));
+    };
+
+    script.src = url.toString();
+    document.body.appendChild(script);
   });
 }

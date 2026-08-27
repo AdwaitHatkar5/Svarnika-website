@@ -1,1 +1,1 @@
-createdAt,orderId,customerName,customerPhone,customerAddress,paymentRef,upiId,total,items,status
+createdAt,orderId,customerName,customerEmail,customerPhone,customerAddress,paymentRef,upiId,total,items,status,shipmentId,shipmentCompanyLink

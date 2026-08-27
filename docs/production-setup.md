@@ -15,6 +15,14 @@ id,name,category,metal,weight,price,image,description,stock
 
 You can either edit the Google Sheet directly or open `/admin` on your deployed site and add products from the website. Product images must be public URLs.
 
+The Apps Script creates and updates the `Orders` tab automatically. If you create it manually, use these headers:
+
+```csv
+createdAt,orderId,customerName,customerEmail,customerPhone,customerAddress,paymentRef,upiId,total,items,status,shipmentId,shipmentCompanyLink
+```
+
+To make shipment tracking visible on the website, update `status`, `shipmentId`, and `shipmentCompanyLink` for the matching `orderId` row. Customers can enter their order ID on the storefront and open the shipment company link from the tracking card.
+
 ## Where To Add UPI Details
 
 Set these variables locally in `.env` and in Netlify under `Site configuration -> Environment variables`:
@@ -33,10 +41,15 @@ Google Apps Script sends email using your Google account. You do not add a Gmail
 3. Paste the code from `docs/google-apps-script.js`.
 4. In Apps Script, go to `Project Settings -> Script Properties`.
 5. Add `OWNER_EMAIL` with the email address that should receive order notifications.
-6. Deploy as `Web app`.
-7. Set `Execute as` to `Me`.
-8. Set `Who has access` to `Anyone`.
-9. Copy the web app URL.
+6. Optional but recommended: add `ORDER_READ_TOKEN` with a strong private value if you want to fetch recent order details through Apps Script for admin/testing.
+7. Deploy as `Web app`.
+8. Set `Execute as` to `Me`.
+9. Set `Who has access` to `Anyone`.
+10. Copy the web app URL.
+
+Customer email is optional in checkout. If entered, it must be a valid email address under 254 characters, and the Apps Script sends a simple order-received email to that address.
+
+After deployment, `ping` reports `inventoryRows` and `orderRows`. To fetch recent order details, POST `payload={"action":"orders","token":"YOUR_ORDER_READ_TOKEN","limit":10}` to the Apps Script URL. Do not put this token in public frontend code.
 
 Add the web app URL to local `.env` and Netlify:
 

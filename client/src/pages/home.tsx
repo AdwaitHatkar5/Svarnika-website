@@ -4,10 +4,12 @@ import {
   CartItem,
   StoreProduct,
   createOrderId,
+  fetchTrackingByOrderId,
   formatPrice,
   parsePrice,
   postToGoogleScript,
   productsFromCsv,
+  type TrackingResponse,
 } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -16,6 +18,8 @@ import {
   BadgeIndianRupee,
   Check,
   Copy,
+  ExternalLink,
+  Mail,
   Send,
   Minus,
   Plus,
@@ -24,14 +28,16 @@ import {
   ShoppingBag,
   Sparkles,
   Trash2,
+  Truck,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import pendantNecklace from "@assets/generated_images/small_diamond_emerald_pendant_necklace.png";
 
 const UPI_ID = import.meta.env.VITE_UPI_ID || "your-upi-id@upi";
 const UPI_NAME = import.meta.env.VITE_UPI_NAME || "Svarnikaa";
 const SHEET_CSV_URL = import.meta.env.VITE_GOOGLE_SHEET_CSV_URL || "";
 const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || "";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
 function buildUpiLink(total: number, items: CartItem[]) {
   const note = `Svarnikaa order: ${items
@@ -61,12 +67,17 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [copied, setCopied] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "sent">("idle");
   const [placedOrderId, setPlacedOrderId] = useState("");
+  const [trackingOrderId, setTrackingOrderId] = useState("");
+  const [trackingStatus, setTrackingStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [trackingResult, setTrackingResult] = useState<TrackingResponse | null>(null);
+  const [trackingError, setTrackingError] = useState("");
 
   useEffect(() => {
     if (!SHEET_CSV_URL) return;
@@ -174,6 +185,16 @@ export default function Home() {
       return;
     }
 
+    const email = customerEmail.trim();
+    if (email && (!EMAIL_PATTERN.test(email) || email.length > 254)) {
+      toast({
+        title: "Check email address",
+        description: "Use a valid email address under 254 characters, or leave it blank.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!paymentRef.trim()) {
       toast({
         title: "UPI reference needed",
@@ -200,6 +221,7 @@ export default function Home() {
         action: "order",
         orderId,
         customerName: customerName.trim(),
+        customerEmail: email ? email.toLowerCase() : "",
         customerPhone: customerPhone.trim(),
         customerAddress: customerAddress.trim(),
         paymentRef: paymentRef.trim(),
@@ -214,9 +236,11 @@ export default function Home() {
       });
 
       setPlacedOrderId(orderId);
+      setTrackingOrderId(orderId);
       setSubmitStatus("sent");
       setCart([]);
       setCustomerName("");
+      setCustomerEmail("");
       setCustomerPhone("");
       setCustomerAddress("");
       setPaymentRef("");
@@ -231,6 +255,53 @@ export default function Home() {
         description: "Please check the Apps Script URL and internet connection.",
         variant: "destructive",
       });
+    }
+  }
+
+  async function checkTracking(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const orderId = trackingOrderId.trim();
+    if (!orderId) {
+      toast({
+        title: "Order ID needed",
+        description: "Enter the order ID you received after checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!ORDER_SCRIPT_URL) {
+      toast({
+        title: "Tracking is not connected",
+        description: "Add VITE_GOOGLE_APPS_SCRIPT_URL to enable order tracking.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTrackingStatus("loading");
+    setTrackingResult(null);
+    setTrackingError("");
+
+    try {
+      const response = await fetchTrackingByOrderId(ORDER_SCRIPT_URL, orderId);
+
+      if (!response.ok) {
+        throw new Error(response.error || "Tracking lookup failed");
+      }
+
+      if (!response.found) {
+        setTrackingStatus("error");
+        setTrackingError("No order found for this ID. Check the order ID and try again.");
+        return;
+      }
+
+      setTrackingResult(response);
+      setTrackingStatus("ready");
+    } catch {
+      setTrackingStatus("error");
+      setTrackingError("Tracking could not be loaded. Please try again in a moment.");
     }
   }
 
@@ -549,6 +620,19 @@ export default function Home() {
                       placeholder="Phone / WhatsApp"
                       className="min-h-11 border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e4c982]"
                     />
+                    <label className="flex min-h-11 items-center gap-3 border border-white/15 bg-white/5 px-3 focus-within:border-[#e4c982]">
+                      <Mail size={16} className="shrink-0 text-white/45" />
+                      <input
+                        value={customerEmail}
+                        onChange={(event) => setCustomerEmail(event.target.value)}
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        maxLength={254}
+                        placeholder="Email for order updates (optional)"
+                        className="min-h-10 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+                      />
+                    </label>
                     <textarea
                       value={customerAddress}
                       onChange={(event) => setCustomerAddress(event.target.value)}
@@ -562,6 +646,18 @@ export default function Home() {
                       placeholder="UPI reference after payment"
                       className="min-h-11 border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e4c982]"
                     />
+                  </div>
+
+                  <div className="flex gap-3 border border-amber-200/35 bg-amber-200/10 p-3 text-amber-50">
+                    <AlertCircle size={18} className="mt-0.5 shrink-0 text-[#f0d894]" />
+                    <div>
+                      <p className="text-xs font-bold uppercase text-[#f0d894]">
+                        Transaction ID is required
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-white/65">
+                        Every order must include the exact UPI transaction/reference ID so payment can be matched before shipping.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="border border-[#e4c982]/35 bg-[#e4c982]/10 p-4">
@@ -623,6 +719,77 @@ export default function Home() {
                   </p>
                 </div>
               </div>
+
+              <form
+                onSubmit={checkTracking}
+                className="mt-4 border border-[#dfcfb5] bg-white p-5 text-[#30271f] shadow-[0_18px_50px_rgba(64,48,29,0.08)]"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase text-[#9d7a31]">
+                      Shipment Tracking
+                    </p>
+                    <h2 className="mt-2 font-serif text-3xl font-semibold text-[#463621]">
+                      Find your order
+                    </h2>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center border border-[#d8c5a6] text-[#9d7a31]">
+                    <Truck size={20} />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3">
+                  <input
+                    value={trackingOrderId}
+                    onChange={(event) => setTrackingOrderId(event.target.value)}
+                    placeholder="Enter order ID"
+                    className="min-h-11 border border-[#dfd2b8] bg-[#fffdf8] px-3 text-sm outline-none placeholder:text-[#8f846e] focus:border-[#9d7a31]"
+                  />
+                  <button
+                    disabled={trackingStatus === "loading"}
+                    className="flex min-h-11 items-center justify-center gap-2 bg-[#3b3025] px-4 text-xs font-black uppercase text-white transition hover:bg-[#9d7a31] disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <Search size={16} />
+                    {trackingStatus === "loading" ? "Checking" : "Check shipment"}
+                  </button>
+                </div>
+
+                {trackingStatus === "ready" && trackingResult ? (
+                  <div className="mt-4 border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-900">
+                    <p>
+                      Status: <strong>{trackingResult.status || "Order received"}</strong>
+                    </p>
+                    {trackingResult.trackingNumber ? (
+                      <div className="mt-2 flex flex-col gap-2">
+                        <p>
+                          Shipment ID: <strong>{trackingResult.trackingNumber}</strong>
+                        </p>
+                        {trackingResult.trackingUrl ? (
+                          <a
+                            href={trackingResult.trackingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-10 w-fit items-center justify-center gap-2 border border-emerald-700 px-3 text-xs font-bold uppercase text-emerald-900 transition hover:bg-emerald-100"
+                          >
+                            <ExternalLink size={14} />
+                            Open company link
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-emerald-800">
+                        Shipment tracking has not been added yet. Please check again after dispatch.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+
+                {trackingStatus === "error" && trackingError ? (
+                  <div className="mt-4 border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">
+                    {trackingError}
+                  </div>
+                ) : null}
+              </form>
             </aside>
           </div>
         </div>
