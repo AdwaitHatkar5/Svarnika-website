@@ -6,7 +6,9 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link } from "wouter";
 
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || "";
-const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || "";
+const DEFAULT_ORDER_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbwrVQRRaGE6gOiGWmv4OVsx4JgvB30El7QKRVZxvMCrCbP0q8qoUMANdncrzJW585WX/exec";
+const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
 
 const emptyProduct: InventoryPayload["product"] = {
   id: "",

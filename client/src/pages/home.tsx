@@ -35,8 +35,12 @@ import pendantNecklace from "@assets/generated_images/small_diamond_emerald_pend
 
 const UPI_ID = import.meta.env.VITE_UPI_ID || "your-upi-id@upi";
 const UPI_NAME = import.meta.env.VITE_UPI_NAME || "Svarnikaa";
-const SHEET_CSV_URL = import.meta.env.VITE_GOOGLE_SHEET_CSV_URL || "";
-const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || "";
+const DEFAULT_SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTfSPkVApqhIMHfrGEaCr-Rg7IOSjjrdAbynlIo7FIpLXdlyDIpdQxZlup0Y2tvBw51OyjQBjJP2NAR/pub?gid=0&single=true&output=csv";
+const DEFAULT_ORDER_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbwrVQRRaGE6gOiGWmv4OVsx4JgvB30El7QKRVZxvMCrCbP0q8qoUMANdncrzJW585WX/exec";
+const SHEET_CSV_URL = import.meta.env.VITE_GOOGLE_SHEET_CSV_URL || DEFAULT_SHEET_CSV_URL;
+const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
 function buildUpiLink(total: number, items: CartItem[]) {
@@ -58,11 +62,12 @@ function buildUpiLink(total: number, items: CartItem[]) {
 export default function Home() {
   const { toast } = useToast();
   const [products, setProducts] = useState<StoreProduct[]>(
-    fallbackProducts as StoreProduct[],
+    SHEET_CSV_URL ? [] : (fallbackProducts as StoreProduct[]),
   );
   const [sheetStatus, setSheetStatus] = useState<"local" | "loading" | "live" | "error">(
     SHEET_CSV_URL ? "loading" : "local",
   );
+  const [inventoryError, setInventoryError] = useState("");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -92,8 +97,13 @@ export default function Home() {
         if (!sheetProducts.length) throw new Error("Sheet has no products");
         setProducts(sheetProducts);
         setSheetStatus("live");
+        setInventoryError("");
       })
-      .catch(() => setSheetStatus("error"));
+      .catch((error) => {
+        setProducts(fallbackProducts as StoreProduct[]);
+        setSheetStatus("error");
+        setInventoryError(error instanceof Error ? error.message : "Inventory could not be loaded");
+      });
   }, []);
 
   const categories = useMemo(
@@ -130,6 +140,7 @@ export default function Home() {
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
   const upiLink = buildUpiLink(subtotal, cart);
+  const isInventoryLoading = sheetStatus === "loading";
 
   function addToCart(product: StoreProduct) {
     setCart((current) => {
@@ -345,8 +356,12 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="border border-white/25 bg-white/10 px-4 py-3 text-right backdrop-blur">
-                  <p className="text-2xl font-semibold">{products.length}</p>
-                  <p className="text-xs text-white/70">pieces</p>
+                  <p className="text-2xl font-semibold">
+                    {isInventoryLoading ? "..." : products.length}
+                  </p>
+                  <p className="text-xs text-white/70">
+                    {isInventoryLoading ? "loading" : "pieces"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -385,7 +400,14 @@ export default function Home() {
                 {[
                   ["Simple cart", "Add and update items quickly."],
                   ["UPI checkout", "Pay directly to your UPI ID."],
-                  ["Live-ready stock", sheetStatus === "live" ? "Google Sheet connected." : "Using local products now."],
+                  [
+                    "Live-ready stock",
+                    sheetStatus === "live"
+                      ? "Google Sheet connected."
+                      : sheetStatus === "loading"
+                        ? "Refreshing Google Sheet."
+                        : "Using local products now.",
+                  ],
                 ].map(([title, text]) => (
                   <div key={title} className="border border-[#eadfca] bg-[#fffdf8] p-4">
                     <p className="text-sm font-bold text-[#342a20]">{title}</p>
@@ -438,7 +460,21 @@ export default function Home() {
                 </div>
               </div>
 
-              {visibleProducts.length ? (
+              {sheetStatus === "error" && inventoryError ? (
+                <div className="border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                  Live inventory could not be loaded: {inventoryError}. Showing local fallback collection.
+                </div>
+              ) : null}
+
+              {isInventoryLoading ? (
+                <div className="border border-dashed border-[#cdb98f] bg-white p-10 text-center">
+                  <Search className="mx-auto mb-4 text-[#9d7a31]" />
+                  <h3 className="font-serif text-3xl text-[#463621]">Refreshing collection</h3>
+                  <p className="mt-2 text-sm text-[#766958]">
+                    Loading live inventory from Google Sheet.
+                  </p>
+                </div>
+              ) : visibleProducts.length ? (
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {visibleProducts.map((product) => (
                     <article

@@ -121,16 +121,42 @@ export function productsFromCsv(csv: string): StoreProduct[] {
         weight: entry.weight || "",
         price: entry.price || entry.amount || "",
         description: entry.description || entry.details || "",
-        image: normalizeImageUrl(entry.image || entry.image_url || entry.photo) || pendantNecklace,
-        category: entry.category || "Jewellery",
-        stock: entry.stock || entry.available || "In stock",
+        image: normalizeImageUrl(entry.image || entry.image_url || entry.photo || "") || pendantNecklace,
+        category: normalizeCategory(entry.category || "Jewellery"),
+        stock: normalizeStock(entry.stock || entry.available || "In stock"),
       };
     })
     .filter((product) => product.name && product.image);
 }
 
-function normalizeImageUrl(value: string) {
-  const imageUrl = value.trim();
+function normalizeCategory(value: string) {
+  const category = value.trim();
+  if (!category) return "Jewellery";
+
+  if (category.toLowerCase() === "braclet") {
+    return "Bracelet";
+  }
+
+  return category;
+}
+
+function normalizeStock(value: string) {
+  const stock = value.trim();
+  if (!stock) return "In stock";
+
+  if (stock === "1" || stock.toLowerCase() === "yes") {
+    return "In stock";
+  }
+
+  if (stock === "0" || stock.toLowerCase() === "no") {
+    return "Out of stock";
+  }
+
+  return stock;
+}
+
+function normalizeImageUrl(value = "") {
+  const imageUrl = String(value).trim();
   if (!imageUrl) return "";
 
   const driveFileId =
