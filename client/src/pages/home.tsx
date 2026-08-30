@@ -41,6 +41,7 @@ const DEFAULT_ORDER_SCRIPT_URL =
 const SHEET_CSV_URL = import.meta.env.VITE_GOOGLE_SHEET_CSV_URL || DEFAULT_SHEET_CSV_URL;
 const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+const URL_PATTERN = /^https?:\/\/\S+\.\S+/i;
 
 function getStockLimit(product: StoreProduct) {
   const match = product.stock?.match(/^(\d+)\s+available/i);
@@ -94,6 +95,7 @@ export default function Home() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
+  const [paymentProofUrl, setPaymentProofUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "sent">("idle");
   const [placedOrderId, setPlacedOrderId] = useState("");
@@ -288,7 +290,17 @@ export default function Home() {
     if (!paymentRef.trim()) {
       toast({
         title: "UPI reference needed",
-        description: "Paste the UPI transaction/reference ID after payment.",
+        description: "Paste the UPI transaction ID after payment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const proofUrl = paymentProofUrl.trim();
+    if (!proofUrl || !URL_PATTERN.test(proofUrl)) {
+      toast({
+        title: "Payment proof needed",
+        description: "Paste a valid screenshot link before submitting.",
         variant: "destructive",
       });
       return;
@@ -306,6 +318,7 @@ export default function Home() {
         customerPhone: customerPhone.trim(),
         customerAddress: customerAddress.trim(),
         paymentRef: paymentRef.trim(),
+        paymentProofUrl: proofUrl,
         upiId: UPI_ID,
         total: subtotal,
         items: cart.map((item) => ({
@@ -325,6 +338,7 @@ export default function Home() {
       setCustomerPhone("");
       setCustomerAddress("");
       setPaymentRef("");
+      setPaymentProofUrl("");
       toast({
         title: "Order submitted",
         description: `Order ${orderId} was sent for confirmation.`,
@@ -728,7 +742,15 @@ export default function Home() {
                   <input
                     value={paymentRef}
                     onChange={(event) => setPaymentRef(event.target.value)}
-                    placeholder="UPI reference after payment"
+                    placeholder="UPI transaction ID"
+                    className="min-h-11 rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
+                  />
+                  <input
+                    value={paymentProofUrl}
+                    onChange={(event) => setPaymentProofUrl(event.target.value)}
+                    type="url"
+                    inputMode="url"
+                    placeholder="Payment screenshot link"
                     className="min-h-11 rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
                   />
                 </div>

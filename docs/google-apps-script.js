@@ -102,6 +102,7 @@ function saveOrder_(order) {
     "customerPhone",
     "customerAddress",
     "paymentRef",
+    "paymentProofUrl",
     "upiId",
     "total",
     "items",
@@ -124,10 +125,11 @@ function saveOrder_(order) {
     customerPhone: order.customerPhone || "",
     customerAddress: order.customerAddress || "",
     paymentRef: order.paymentRef || "",
+    paymentProofUrl: order.paymentProofUrl || "",
     upiId: order.upiId || "",
     total: order.total || "",
     items: itemsText,
-    status: "Payment reference received",
+    status: "Payment proof received",
     shipmentId: "",
     shipmentCompanyLink: "",
   });
@@ -160,6 +162,9 @@ function saveOrder_(order) {
         "<p><b>UPI Reference:</b> " +
         escapeHtml_(order.paymentRef || "") +
         "</p>" +
+        "<p><b>Payment Proof:</b> " +
+        proofLinkHtml_(order.paymentProofUrl || "") +
+        "</p>" +
         "<p><b>Total:</b> INR " +
         escapeHtml_(String(order.total || "")) +
         "</p>" +
@@ -175,11 +180,11 @@ function saveOrder_(order) {
       subject: "Svarnikaa order received " + (order.orderId || ""),
       htmlBody:
         "<h2>Thank you for your Svarnikaa order</h2>" +
-        "<p>We have received your order and UPI reference.</p>" +
+        "<p>We have received your order, UPI reference, and payment proof.</p>" +
         "<p><b>Order ID:</b> " +
         escapeHtml_(order.orderId || "") +
         "</p>" +
-        "<p><b>Status:</b> Payment reference received</p>" +
+        "<p><b>Status:</b> Payment proof received</p>" +
         "<p>Keep this order ID to check shipment tracking after dispatch.</p>",
     });
   }
@@ -200,6 +205,7 @@ function lookupTracking_(orderId, callback) {
     "customerPhone",
     "customerAddress",
     "paymentRef",
+    "paymentProofUrl",
     "upiId",
     "total",
     "items",
@@ -273,6 +279,7 @@ function listOrders_(token, limit) {
     "customerPhone",
     "customerAddress",
     "paymentRef",
+    "paymentProofUrl",
     "upiId",
     "total",
     "items",
@@ -304,6 +311,7 @@ function listOrders_(token, limit) {
         customerPhone: order.customerPhone || "",
         customerAddress: order.customerAddress || "",
         paymentRef: order.paymentRef || "",
+        paymentProofUrl: order.paymentProofUrl || "",
         upiId: order.upiId || "",
         total: order.total || "",
         items: order.items || "",
@@ -435,6 +443,7 @@ function ensureRequiredSheets_() {
     "customerPhone",
     "customerAddress",
     "paymentRef",
+    "paymentProofUrl",
     "upiId",
     "total",
     "items",
@@ -482,6 +491,17 @@ function escapeHtml_(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function proofLinkHtml_(value) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+
+  return (
+    '<a href="' +
+    escapeHtml_(url) +
+    '" target="_blank" rel="noopener noreferrer">Open payment proof</a>'
+  );
 }
 
 function isValidEmail_(value) {
