@@ -1,0 +1,10 @@
+2026-08-30 08:34:00.770: [INFO] CurrentProfilePath: D:\Golden-Jewels\.tmp-edge-desktop\Default
+2026-08-30 08:34:00.770: [INFO] Profiles total count: 1
+2026-08-30 08:34:00.770: [INFO] Profile: name=Profile 1 path=D:\Golden-Jewels\.tmp-edge-desktop\Default lastActive=2026-08-30T08:34:00.755Z
+2026-08-30 08:34:00.770: [INFO] LastUsedProfileDir: D:\Golden-Jewels\.tmp-edge-desktop\Default
+2026-08-30 08:34:00.770: [INFO] MostRecentlyActiveProfile: name=Profile 1 path=D:\Golden-Jewels\.tmp-edge-desktop\Default lastActive=2026-08-30T08:34:00.755Z
+2026-08-30 08:34:00.770: [INFO] OnDoneLoading sync enabled: 0
+2026-08-30 08:34:00.770: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-30 08:34:00.770: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-30 08:34:00.770: [INFO] BookmarksSnapshot Startup total=0 bar=0 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-30 08:34:00.812: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
