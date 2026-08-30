@@ -62,8 +62,8 @@ function withCacheBust(url: string) {
   }
 }
 
-function buildUpiLink(total: number, items: CartItem[]) {
-  const note = `Svarnikaa order: ${items
+function buildUpiLink(total: number, items: CartItem[], orderId: string) {
+  const note = `Svarnikaa ${orderId}: ${items
     .map((item) => `${item.name} x${item.quantity}`)
     .join(", ")}`.slice(0, 80);
 
@@ -78,6 +78,16 @@ function buildUpiLink(total: number, items: CartItem[]) {
   return `upi://pay?${params.toString()}`;
 }
 
+function buildQrCodeUrl(value: string) {
+  const params = new URLSearchParams({
+    size: "260x260",
+    margin: "12",
+    data: value,
+  });
+
+  return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
+}
+
 export default function Home() {
   const { toast } = useToast();
   const [products, setProducts] = useState<StoreProduct[]>(
@@ -90,6 +100,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [draftOrderId, setDraftOrderId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -97,6 +108,7 @@ export default function Home() {
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentProofUrl, setPaymentProofUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [qrFailed, setQrFailed] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "sent">("idle");
   const [placedOrderId, setPlacedOrderId] = useState("");
   const [trackingOrderId, setTrackingOrderId] = useState("");
@@ -125,6 +137,16 @@ export default function Home() {
         setInventoryError(error instanceof Error ? error.message : "Inventory could not be loaded");
       });
   }, []);
+
+  useEffect(() => {
+    if (cart.length && !draftOrderId) {
+      setDraftOrderId(createOrderId());
+    }
+
+    if (!cart.length && draftOrderId) {
+      setDraftOrderId("");
+    }
+  }, [cart.length, draftOrderId]);
 
   const categories = useMemo(
     () => [
@@ -175,9 +197,14 @@ export default function Home() {
   );
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
-  const upiLink = UPI_ID ? buildUpiLink(subtotal, cart) : "";
+  const upiLink = UPI_ID && draftOrderId ? buildUpiLink(subtotal, cart, draftOrderId) : "";
+  const qrCodeUrl = upiLink ? buildQrCodeUrl(upiLink) : "";
   const isInventoryLoading = sheetStatus === "loading";
-  const canPay = cart.length > 0 && subtotal > 0 && Boolean(UPI_ID);
+  const canPay = cart.length > 0 && subtotal > 0 && Boolean(UPI_ID) && Boolean(draftOrderId);
+
+  useEffect(() => {
+    setQrFailed(false);
+  }, [qrCodeUrl]);
 
   function focusCategory(category: string) {
     setActiveCategory(category);
@@ -306,7 +333,7 @@ export default function Home() {
       return;
     }
 
-    const orderId = createOrderId();
+    const orderId = draftOrderId || createOrderId();
     setSubmitStatus("submitting");
 
     try {
@@ -339,6 +366,7 @@ export default function Home() {
       setCustomerAddress("");
       setPaymentRef("");
       setPaymentProofUrl("");
+      setDraftOrderId("");
       toast({
         title: "Order submitted",
         description: `Order ${orderId} was sent for confirmation.`,
@@ -773,7 +801,35 @@ export default function Home() {
                       </button>
                     ) : null}
                   </div>
+                  {draftOrderId ? (
+                    <p className="mt-3 text-xs leading-5 text-white/58">
+                      Payment note: {draftOrderId}
+                    </p>
+                  ) : null}
                 </div>
+
+                {canPay ? (
+                  <div className="rounded-[6px] border border-white/15 bg-white p-4 text-center text-[#1f1d1a]">
+                    {!qrFailed ? (
+                      <img
+                        src={qrCodeUrl}
+                        alt={`UPI QR for ${formatPrice(subtotal)}`}
+                        onError={() => setQrFailed(true)}
+                        className="mx-auto aspect-square w-full max-w-[220px] object-contain"
+                      />
+                    ) : (
+                      <div className="mx-auto flex aspect-square w-full max-w-[220px] items-center justify-center rounded-[6px] border border-dashed border-[#c9bea8] bg-[#fbfaf6] p-5 text-sm leading-6 text-[#626057]">
+                        QR could not load. Use Pay button below.
+                      </div>
+                    )}
+                    <p className="mt-3 text-xs font-bold uppercase text-[#8c6b2f]">
+                      Scan with any UPI app
+                    </p>
+                    <p className="mt-1 text-xs text-[#626057]">
+                      Amount and payment note are pre-filled.
+                    </p>
+                  </div>
+                ) : null}
 
                 {canPay ? (
                   <a
