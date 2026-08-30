@@ -8,6 +8,12 @@ const env = {
 const sheetCsvUrl = env.VITE_GOOGLE_SHEET_CSV_URL || "";
 const scriptUrl = env.VITE_GOOGLE_APPS_SCRIPT_URL || "";
 
+function withCacheBust(url) {
+  const csvUrl = new URL(url);
+  csvUrl.searchParams.set("_", String(Date.now()));
+  return csvUrl.toString();
+}
+
 function loadEnvFile(path) {
   if (!existsSync(path)) return {};
 
@@ -43,7 +49,7 @@ async function checkCsv() {
     };
   }
 
-  const response = await fetch(sheetCsvUrl);
+  const response = await fetch(withCacheBust(sheetCsvUrl));
   const csv = await response.text();
   const firstLine = csv.split(/\r?\n/)[0] || "";
   const rowCount = countCsvRows(csv);

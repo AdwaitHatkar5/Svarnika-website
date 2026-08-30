@@ -143,6 +143,11 @@ function normalizeCategory(value: string) {
 function normalizeStock(value: string) {
   const stock = value.trim();
   if (!stock) return "In stock";
+  const stockCount = Number(stock);
+
+  if (Number.isFinite(stockCount)) {
+    return stockCount > 0 ? `${stockCount} available` : "Out of stock";
+  }
 
   if (stock === "1" || stock.toLowerCase() === "yes") {
     return "In stock";
