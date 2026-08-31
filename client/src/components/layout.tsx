@@ -23,9 +23,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     className="h-full w-full scale-110 object-cover [mask-image:radial-gradient(circle,black_72%,transparent_100%)]"
                   />
                 </div>
-                <div className="hidden text-center sm:block">
-                  <p className="font-serif text-[28px] font-semibold leading-none tracking-normal text-[#1f1d1a]">SVARNIKAA</p>
-                  <p className="mt-1 text-[10px] font-semibold uppercase text-[#8c6b2f]">Jewellery Boutique</p>
+                <div className="block text-left sm:text-center">
+                  <p className="font-serif text-[22px] font-semibold leading-none tracking-normal text-[#1f1d1a] sm:text-[28px]">SVARNIKAA</p>
+                  <p className="mt-1 hidden text-[10px] font-semibold uppercase text-[#8c6b2f] sm:block">Jewellery Boutique</p>
                 </div>
               </div>
             </Link>

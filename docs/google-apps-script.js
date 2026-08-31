@@ -2,6 +2,8 @@ const INVENTORY_SHEET_NAME = "Inventory";
 const ORDERS_SHEET_NAME = "Orders";
 const OWNER_EMAIL_PROPERTY = "OWNER_EMAIL";
 const ORDER_READ_TOKEN_PROPERTY = "ORDER_READ_TOKEN";
+const PAYMENT_PROOF_FOLDER_ID_PROPERTY = "PAYMENT_PROOF_FOLDER_ID";
+const PAYMENT_PROOF_FOLDER_NAME = "Svarnikaa Payment Proofs";
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === "tracking") {
@@ -93,7 +95,38 @@ function saveInventory_(product) {
   return json_({ ok: true });
 }
 
+function savePaymentProof_(order) {
+  const proofFile = order.paymentProofFile;
+
+  if (!proofFile || !proofFile.data) {
+    return {
+      id: "",
+      url: order.paymentProofUrl || "",
+      name: "",
+    };
+  }
+
+  const safeName = sanitizeFileName_(
+    (order.orderId || "order") + "-" + (proofFile.name || "payment-proof.jpg"),
+  );
+  const mimeType = proofFile.mimeType || "image/jpeg";
+  const blob = Utilities.newBlob(
+    Utilities.base64Decode(proofFile.data),
+    mimeType,
+    safeName,
+  );
+  const folder = getPaymentProofFolder_();
+  const file = folder.createFile(blob);
+
+  return {
+    id: file.getId(),
+    url: file.getUrl(),
+    name: file.getName(),
+  };
+}
+
 function saveOrder_(order) {
+  const proof = savePaymentProof_(order);
   const sheet = getSheet_(ORDERS_SHEET_NAME, [
     "createdAt",
     "orderId",
@@ -103,6 +136,8 @@ function saveOrder_(order) {
     "customerAddress",
     "paymentRef",
     "paymentProofUrl",
+    "paymentProofFileId",
+    "paymentProofFileName",
     "upiId",
     "total",
     "items",
@@ -125,7 +160,9 @@ function saveOrder_(order) {
     customerPhone: order.customerPhone || "",
     customerAddress: order.customerAddress || "",
     paymentRef: order.paymentRef || "",
-    paymentProofUrl: order.paymentProofUrl || "",
+    paymentProofUrl: proof.url || order.paymentProofUrl || "",
+    paymentProofFileId: proof.id || "",
+    paymentProofFileName: proof.name || "",
     upiId: order.upiId || "",
     total: order.total || "",
     items: itemsText,
@@ -163,7 +200,7 @@ function saveOrder_(order) {
         escapeHtml_(order.paymentRef || "") +
         "</p>" +
         "<p><b>Payment Proof:</b> " +
-        proofLinkHtml_(order.paymentProofUrl || "") +
+        proofLinkHtml_(proof.url || order.paymentProofUrl || "") +
         "</p>" +
         "<p><b>Total:</b> INR " +
         escapeHtml_(String(order.total || "")) +
@@ -206,6 +243,8 @@ function lookupTracking_(orderId, callback) {
     "customerAddress",
     "paymentRef",
     "paymentProofUrl",
+    "paymentProofFileId",
+    "paymentProofFileName",
     "upiId",
     "total",
     "items",
@@ -280,6 +319,8 @@ function listOrders_(token, limit) {
     "customerAddress",
     "paymentRef",
     "paymentProofUrl",
+    "paymentProofFileId",
+    "paymentProofFileName",
     "upiId",
     "total",
     "items",
@@ -312,6 +353,8 @@ function listOrders_(token, limit) {
         customerAddress: order.customerAddress || "",
         paymentRef: order.paymentRef || "",
         paymentProofUrl: order.paymentProofUrl || "",
+        paymentProofFileId: order.paymentProofFileId || "",
+        paymentProofFileName: order.paymentProofFileName || "",
         upiId: order.upiId || "",
         total: order.total || "",
         items: order.items || "",
@@ -444,6 +487,8 @@ function ensureRequiredSheets_() {
     "customerAddress",
     "paymentRef",
     "paymentProofUrl",
+    "paymentProofFileId",
+    "paymentProofFileName",
     "upiId",
     "total",
     "items",
@@ -502,6 +547,29 @@ function proofLinkHtml_(value) {
     escapeHtml_(url) +
     '" target="_blank" rel="noopener noreferrer">Open payment proof</a>'
   );
+}
+
+function getPaymentProofFolder_() {
+  const properties = PropertiesService.getScriptProperties();
+  const folderId = properties.getProperty(PAYMENT_PROOF_FOLDER_ID_PROPERTY);
+
+  if (folderId) {
+    return DriveApp.getFolderById(folderId);
+  }
+
+  const folders = DriveApp.getFoldersByName(PAYMENT_PROOF_FOLDER_NAME);
+  const folder = folders.hasNext()
+    ? folders.next()
+    : DriveApp.createFolder(PAYMENT_PROOF_FOLDER_NAME);
+
+  properties.setProperty(PAYMENT_PROOF_FOLDER_ID_PROPERTY, folder.getId());
+  return folder;
+}
+
+function sanitizeFileName_(value) {
+  return String(value || "payment-proof.jpg")
+    .replace(/[\\/:*?"<>|#%{}~&]/g, "-")
+    .slice(0, 140);
 }
 
 function isValidEmail_(value) {

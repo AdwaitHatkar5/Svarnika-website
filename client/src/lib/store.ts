@@ -24,7 +24,12 @@ export type CheckoutPayload = {
   customerPhone: string;
   customerAddress: string;
   paymentRef: string;
-  paymentProofUrl: string;
+  paymentProofUrl?: string;
+  paymentProofFile: {
+    name: string;
+    mimeType: string;
+    data: string;
+  };
   upiId: string;
   total: number;
   items: Array<{
