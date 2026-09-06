@@ -2,6 +2,7 @@ const INVENTORY_SHEET_NAME = "Inventory";
 const ORDERS_SHEET_NAME = "Orders";
 const OWNER_EMAIL_PROPERTY = "OWNER_EMAIL";
 const ORDER_READ_TOKEN_PROPERTY = "ORDER_READ_TOKEN";
+const ADMIN_ACCESS_KEY = "change-this-pin";
 const PAYMENT_PROOF_FOLDER_ID_PROPERTY = "PAYMENT_PROOF_FOLDER_ID";
 const PAYMENT_PROOF_FOLDER_NAME = "Svarnikaa Payment Proofs";
 const INVENTORY_IMAGE_FOLDER_NAME = "Inventory";
@@ -508,19 +509,19 @@ function listOrders_(token, limit, callback) {
 }
 
 function validateOrderToken_(token) {
-  const expectedToken = PropertiesService.getScriptProperties().getProperty(
-    ORDER_READ_TOKEN_PROPERTY,
-  );
+  const expectedToken =
+    PropertiesService.getScriptProperties().getProperty(ORDER_READ_TOKEN_PROPERTY) ||
+    ADMIN_ACCESS_KEY;
 
   if (!expectedToken) {
     return {
       ok: false,
-      error: "ORDER_READ_TOKEN script property is not set",
+      error: "Admin order access is not configured",
     };
   }
 
   if (!token || token !== expectedToken) {
-    return { ok: false, error: "Unauthorized" };
+    return { ok: false, error: "Admin order access did not match" };
   }
 
   return null;

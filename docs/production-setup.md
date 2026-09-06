@@ -41,15 +41,14 @@ Google Apps Script sends email using your Google account. You do not add a Gmail
 3. Paste the code from `docs/google-apps-script.js`.
 4. In Apps Script, go to `Project Settings -> Script Properties`.
 5. Add `OWNER_EMAIL` with the email address that should receive order notifications.
-6. Optional but recommended: add `ORDER_READ_TOKEN` with a strong private value if you want to fetch recent order details through Apps Script for admin/testing.
-7. Deploy as `Web app`.
-8. Set `Execute as` to `Me`.
-9. Set `Who has access` to `Anyone`.
-10. Copy the web app URL.
+6. Deploy as `Web app`.
+7. Set `Execute as` to `Me`.
+8. Set `Who has access` to `Anyone`.
+9. Copy the web app URL.
 
 Customer email is optional in checkout. If entered, it must be a valid email address under 254 characters, and the Apps Script sends a simple order-received email to that address.
 
-After deployment, `ping` reports `inventoryRows` and `orderRows`. To fetch recent order details, use the admin page and enter the `ORDER_READ_TOKEN` from Apps Script properties. Do not store this token in frontend env files.
+After deployment, `ping` reports `inventoryRows` and `orderRows`. The admin page loads orders automatically after PIN unlock.
 
 Add the web app URL to local `.env` and Netlify:
 
@@ -92,7 +91,7 @@ Admin supports:
 
 - Product add/edit by `id`; the Apps Script updates the matching product row instead of creating duplicates.
 - Offer fields: `originalPrice`, `offerLabel`, and `offerText`.
-- Recent order dashboard using `ORDER_READ_TOKEN`.
+- Recent order dashboard after admin PIN unlock.
 - Status, shipment ID, and courier link updates.
 - Invoice generation with two modes: single customer/multiple orders and two orders on one A4 page.
 

@@ -35,7 +35,6 @@ const SHEET_CSV_URL = import.meta.env.VITE_GOOGLE_SHEET_CSV_URL || "";
 const DEFAULT_ORDER_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwrVQRRaGE6gOiGWmv4OVsx4JgvB30El7QKRVZxvMCrCbP0q8qoUMANdncrzJW585WX/exec";
 const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
-const ORDER_TOKEN_STORAGE_KEY = "svarnikaa-admin-order-token";
 const MAX_INVENTORY_IMAGE_BYTES = 4 * 1024 * 1024;
 
 const company = {
@@ -319,7 +318,6 @@ export default function Admin() {
   const [productQuery, setProductQuery] = useState("");
   const [inventoryStatus, setInventoryStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [saving, setSaving] = useState(false);
-  const [orderToken, setOrderToken] = useState(() => localStorage.getItem(ORDER_TOKEN_STORAGE_KEY) || "");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [orderDrafts, setOrderDrafts] = useState<Record<string, OrderDraft>>({});
   const [orderStatus, setOrderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -356,6 +354,7 @@ export default function Admin() {
   useEffect(() => {
     if (unlocked) {
       loadInventory();
+      loadOrders();
     }
   }, [unlocked]);
 
@@ -433,20 +432,21 @@ export default function Admin() {
   }
 
   async function loadOrders() {
-    if (!ORDER_SCRIPT_URL || !orderToken.trim()) {
+    const adminKey = pin || ADMIN_PIN;
+
+    if (!ORDER_SCRIPT_URL || !adminKey.trim()) {
       toast({
-        title: "Order token needed",
-        description: "Enter ORDER_READ_TOKEN from Apps Script properties.",
+        title: "Order access not ready",
+        description: "Set the same admin key in Apps Script once.",
         variant: "destructive",
       });
       return;
     }
 
     setOrderStatus("loading");
-    localStorage.setItem(ORDER_TOKEN_STORAGE_KEY, orderToken.trim());
 
     try {
-      const response = await fetchAdminOrders(ORDER_SCRIPT_URL, orderToken.trim(), 50);
+      const response = await fetchAdminOrders(ORDER_SCRIPT_URL, adminKey.trim(), 50);
 
       if (!response.ok) {
         throw new Error(response.error || "Orders could not load");
@@ -469,7 +469,7 @@ export default function Admin() {
       setOrderStatus("error");
       toast({
         title: "Orders not loaded",
-        description: error instanceof Error ? error.message : "Check Apps Script deployment and token.",
+        description: error instanceof Error ? error.message : "Check Apps Script deployment and admin key.",
         variant: "destructive",
       });
     }
@@ -571,12 +571,13 @@ export default function Admin() {
 
   async function saveOrderUpdate(order: AdminOrder) {
     const draft = orderDrafts[order.orderId];
+    const adminKey = pin || ADMIN_PIN;
 
-    if (!orderToken.trim() || !draft) return;
+    if (!adminKey.trim() || !draft) return;
 
     await postToGoogleScript(ORDER_SCRIPT_URL, {
       action: "updateOrder",
-      token: orderToken.trim(),
+      token: adminKey.trim(),
       orderId: order.orderId,
       status: draft.status,
       shipmentId: draft.shipmentId,
@@ -683,25 +684,19 @@ export default function Admin() {
               {activeTab === "orders" ? (
                 <section className="grid gap-6 xl:grid-cols-[340px_1fr]">
                   <aside className="rounded-[8px] border border-[#dfcfb5] bg-white p-5 xl:self-start">
-                    <p className="text-xs font-bold uppercase text-[#9d7a31]">Order access</p>
+                    <p className="text-xs font-bold uppercase text-[#9d7a31]">Order desk</p>
                     <h2 className="mt-2 font-serif text-3xl font-semibold text-[#30271f]">Dashboard</h2>
-                    <label className="mt-5 block">
-                      <span className="text-xs font-bold uppercase text-[#806b45]">ORDER_READ_TOKEN</span>
-                      <input
-                        value={orderToken}
-                        onChange={(event) => setOrderToken(event.target.value)}
-                        type="password"
-                        className="mt-2 min-h-12 w-full rounded-[6px] border border-[#dfd2b8] bg-[#fffdf8] px-4 text-sm outline-none focus:border-[#9d7a31]"
-                      />
-                    </label>
+                    <p className="mt-3 text-sm leading-6 text-[#6a5d4c]">
+                      Orders load automatically after admin unlock.
+                    </p>
                     <button
                       type="button"
                       onClick={loadOrders}
                       disabled={orderStatus === "loading"}
-                      className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-[6px] bg-[#3b3025] px-4 text-xs font-black uppercase text-white transition hover:bg-[#9d7a31] disabled:cursor-wait disabled:opacity-60"
+                      className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-[6px] bg-[#3b3025] px-4 text-xs font-black uppercase text-white transition hover:bg-[#9d7a31] disabled:cursor-wait disabled:opacity-60"
                     >
                       <RefreshCw size={16} className={orderStatus === "loading" ? "animate-spin" : ""} />
-                      Load orders
+                      {orderStatus === "loading" ? "Syncing orders" : "Refresh orders"}
                     </button>
                     <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-[6px] border border-[#eadcc1] bg-[#fffdf8] p-3">
@@ -815,8 +810,14 @@ export default function Admin() {
                     ) : (
                       <div className="rounded-[8px] border border-dashed border-[#c9bea8] bg-white p-10 text-center">
                         <PackageCheck className="mx-auto mb-4 text-[#9d7a31]" />
-                        <h3 className="font-serif text-3xl text-[#30271f]">Load orders to begin</h3>
-                        <p className="mt-2 text-sm text-[#6a5d4c]">Use your Apps Script order token to view and manage received orders.</p>
+                        <h3 className="font-serif text-3xl text-[#30271f]">
+                          {orderStatus === "loading" ? "Syncing orders" : "No orders loaded"}
+                        </h3>
+                        <p className="mt-2 text-sm text-[#6a5d4c]">
+                          {orderStatus === "loading"
+                            ? "Recent customer orders are being fetched."
+                            : "Refresh orders after new customer checkout."}
+                        </p>
                       </div>
                     )}
                   </div>
