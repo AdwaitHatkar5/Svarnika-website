@@ -50,6 +50,21 @@ function isOutOfStock(product: StoreProduct) {
   return /out\s+of\s+stock/i.test(product.stock || "");
 }
 
+function isCustomerVisibleProduct(product: StoreProduct) {
+  const searchableText = [
+    product.name,
+    product.description,
+    product.category,
+    product.stock,
+    product.offerLabel,
+    product.offerText,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return !/(^|[\s-])test(?:ing)?([\s-]|$)/i.test(searchableText);
+}
+
 function withCacheBust(url: string) {
   try {
     const csvUrl = new URL(url);
@@ -103,7 +118,7 @@ function readFileAsBase64(file: File) {
 export default function Home() {
   const { toast } = useToast();
   const [products, setProducts] = useState<StoreProduct[]>(
-    SHEET_CSV_URL ? [] : (fallbackProducts as StoreProduct[]),
+    SHEET_CSV_URL ? [] : (fallbackProducts as StoreProduct[]).filter(isCustomerVisibleProduct),
   );
   const [sheetStatus, setSheetStatus] = useState<"local" | "loading" | "live" | "error">(
     SHEET_CSV_URL ? "loading" : "local",
@@ -136,13 +151,13 @@ export default function Home() {
         return response.text();
       })
       .then((csv) => {
-        const sheetProducts = productsFromCsv(csv);
+        const sheetProducts = productsFromCsv(csv).filter(isCustomerVisibleProduct);
         if (!sheetProducts.length) throw new Error("Sheet has no products");
         setProducts(sheetProducts);
         setSheetStatus("live");
       })
       .catch(() => {
-        setProducts(fallbackProducts as StoreProduct[]);
+        setProducts((fallbackProducts as StoreProduct[]).filter(isCustomerVisibleProduct));
         setSheetStatus("error");
       });
   }, []);

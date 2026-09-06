@@ -173,6 +173,57 @@ function invoiceBlock(order: AdminOrder, index: number, compact = false) {
     )
     .join("");
 
+  if (compact) {
+    return `
+      <section class="invoice compact">
+        <div class="bar"></div>
+        <div class="compact-head">
+          <div>
+            <h1>${company.name}</h1>
+            <p>${company.address}</p>
+            <p>Pincode: ${company.pincode}</p>
+          </div>
+          <div class="compact-badges">
+            <span>FRAGILE</span>
+            <span>GLASS INSIDE</span>
+            <span>HANDLE WITH CARE</span>
+            <span>PRE-PAID</span>
+          </div>
+        </div>
+        <div class="compact-meta">
+          <div class="deliver">
+            <h2>Deliver To</h2>
+            <p><b>Name:</b> ${escapeHtml(order.customerName || "-")}</p>
+            <p><b>Address:</b> ${escapeHtml(order.customerAddress || "-")}</p>
+            <p><b>Contact:</b> ${escapeHtml(order.customerPhone || "-")}</p>
+          </div>
+          <div class="invoice-meta">
+            <p><b>Invoice No:</b> ${invoiceNumber(order, index)}</p>
+            <p><b>Invoice Date:</b> ${formatDate(order.createdAt)}</p>
+            <p><b>Order ID:</b> ${escapeHtml(order.orderId || "-")}</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Purchased Items</th>
+              <th>Qty</th>
+              <th>Disc</th>
+              <th>Unit price</th>
+              <th>Total price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+            <tr><td></td><td></td><td></td><td></td><td><b>Total Price:</b></td><td><b>${escapeHtml(formatPrice(grandTotal))}</b></td></tr>
+            <tr><td></td><td colspan="4"><b>Total Price :</b></td><td><b>${escapeHtml(formatPrice(grandTotal))}</b></td></tr>
+          </tbody>
+        </table>
+      </section>
+    `;
+  }
+
   return `
     <section class="invoice ${compact ? "compact" : ""}">
       <div class="bar"></div>
@@ -262,22 +313,32 @@ function openInvoicePrint(orders: AdminOrder[], mode: InvoiceMode) {
           * { box-sizing: border-box; }
           body { margin: 0; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; }
           .page { width: 190mm; min-height: 277mm; margin: 0 auto; page-break-after: always; }
-          .page.split { display: grid; grid-template-rows: 1fr 1fr; gap: 7mm; }
-          .invoice { padding: 0 7mm 5mm; font-size: 11px; }
-          .invoice.compact { font-size: 9px; overflow: hidden; }
+          .page.split { height: 277mm; min-height: 277mm; display: grid; grid-template-rows: 135mm 135mm; gap: 7mm; overflow: hidden; }
+          .invoice { padding: 0 7mm 5mm; font-size: 11px; break-inside: avoid; page-break-inside: avoid; }
+          .invoice.compact { height: 135mm; padding: 0 5mm 4mm; font-size: 8.5px; overflow: hidden; }
           .bar { height: 6px; background: #806000; margin: 0 -7mm 14px; }
+          .compact .bar { height: 4px; margin: 0 -5mm 7px; }
           .middle { margin-top: 18px; }
           h1 { margin: 0 0 6px; color: #c48b00; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; letter-spacing: .2px; }
+          .compact h1 { margin-bottom: 3px; font-size: 13px; }
           h2 { margin: 12px 0 8px; font-size: 14px; }
+          .compact h2 { margin: 6px 0 4px; font-size: 10px; }
           p { margin: 0 0 4px; line-height: 1.35; }
+          .compact p { margin-bottom: 2px; line-height: 1.22; }
           .top-grid, .invoice-head { display: grid; grid-template-columns: 1fr 46mm; gap: 20mm; }
           .labels { display: flex; flex-direction: column; gap: 18mm; padding-top: 12px; }
           .labels span, .paid { display: block; border: 3px solid #000; padding: 4px 10px; text-align: center; font-weight: 800; font-size: 14px; }
           .paid { margin-bottom: 12px; }
           .deliver, .buyer { margin-top: 10px; max-width: 95mm; font-weight: 600; }
+          .compact-head, .compact-meta { display: grid; grid-template-columns: 1fr 46mm; gap: 8mm; align-items: start; }
+          .compact-badges { display: grid; gap: 3mm; }
+          .compact-badges span { display: block; border: 2px solid #000; padding: 2px 6px; text-align: center; font-weight: 800; font-size: 9px; }
+          .compact .deliver { margin-top: 6px; max-width: none; }
+          .compact .invoice-meta { margin-top: 8px; font-weight: 700; }
           table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 10px; }
-          .compact table { margin-top: 8px; font-size: 8px; }
+          .compact table { margin-top: 7px; font-size: 7.5px; }
           th, td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+          .compact th, .compact td { padding: 2px 4px; }
           th { color: #a56f00; font-weight: 800; }
           th:first-child, td:first-child { width: 12mm; text-align: center; }
           th:nth-child(3), td:nth-child(3) { width: 14mm; text-align: center; }
