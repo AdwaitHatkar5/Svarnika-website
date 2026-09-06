@@ -108,7 +108,6 @@ export default function Home() {
   const [sheetStatus, setSheetStatus] = useState<"local" | "loading" | "live" | "error">(
     SHEET_CSV_URL ? "loading" : "local",
   );
-  const [inventoryError, setInventoryError] = useState("");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -141,12 +140,10 @@ export default function Home() {
         if (!sheetProducts.length) throw new Error("Sheet has no products");
         setProducts(sheetProducts);
         setSheetStatus("live");
-        setInventoryError("");
       })
-      .catch((error) => {
+      .catch(() => {
         setProducts(fallbackProducts as StoreProduct[]);
         setSheetStatus("error");
-        setInventoryError(error instanceof Error ? error.message : "Inventory could not be loaded");
       });
   }, []);
 
@@ -198,6 +195,19 @@ export default function Home() {
       return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
   }, [activeCategory, products, query]);
+
+  const activeOffers = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          products
+            .flatMap((product) => [product.offerText, product.offerLabel])
+            .map((offer) => offer?.trim())
+            .filter((offer): offer is string => Boolean(offer)),
+        ),
+      ).slice(0, 3),
+    [products],
+  );
 
   const subtotal = useMemo(
     () =>
@@ -280,6 +290,10 @@ export default function Home() {
   function canIncreaseCartItem(item: CartItem) {
     const stockLimit = getStockLimit(item);
     return stockLimit === null || item.quantity < stockLimit;
+  }
+
+  function getCartQuantity(productId: number) {
+    return cart.find((item) => item.id === productId)?.quantity || 0;
   }
 
   function selectPaymentProof(file: File | null) {
@@ -563,10 +577,33 @@ export default function Home() {
           )}
         </section>
 
+        {activeOffers.length ? (
+          <section className="border-y border-[#ded6c8] bg-[#fffdf8]">
+            <div className="container mx-auto grid gap-4 px-4 py-6 md:grid-cols-[220px_1fr] md:items-center md:px-6">
+              <div>
+                <p className="text-xs font-bold uppercase text-[#8c6b2f]">Current offers</p>
+                <h2 className="mt-1 font-serif text-3xl font-semibold text-[#20201d]">
+                  Live from inventory
+                </h2>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {activeOffers.map((offer) => (
+                  <div
+                    key={offer}
+                    className="rounded-[6px] border border-[#dfd3bd] bg-white px-4 py-3 text-sm font-semibold leading-6 text-[#45392d]"
+                  >
+                    {offer}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <div className="border-y border-[#2f332d] bg-[#1f211d] text-white">
           <div className="container mx-auto grid grid-cols-1 divide-y divide-white/10 px-4 md:grid-cols-3 md:divide-x md:divide-y-0 md:px-6">
             {[
-              ["Payment proof", "Transaction ID and screenshot link are captured before review."],
+              ["Payment proof", "Transaction ID and private screenshot upload are captured before review."],
               ["Owner approval", "Orders move forward only after stock and payment are checked."],
               ["Dispatch tracking", "Shipment ID and courier link can be updated after dispatch."],
             ].map(([title, text], index) => (
@@ -625,12 +662,6 @@ export default function Home() {
               ))}
             </div>
 
-            {sheetStatus === "error" && inventoryError ? (
-              <div className="rounded-[6px] border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                Live inventory is refreshing. Showing curated collection for now.
-              </div>
-            ) : null}
-
             {isInventoryLoading ? (
               <div className="rounded-[8px] border border-dashed border-[#c9bea8] bg-white p-10 text-center">
                 <Search className="mx-auto mb-4 text-[#8c6b2f]" />
@@ -641,54 +672,99 @@ export default function Home() {
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {visibleProducts.map((product) => {
                   const productUnavailable = isOutOfStock(product);
+                  const quantityInCart = getCartQuantity(product.id);
+                  const stockLimit = getStockLimit(product);
+                  const canIncreaseProduct =
+                    !productUnavailable && (stockLimit === null || quantityInCart < stockLimit);
 
                   return (
-                  <article
-                    key={product.id}
-                    className="group flex min-h-full flex-col overflow-hidden rounded-[8px] border border-[#e2ddd3] bg-white shadow-[0_16px_34px_rgba(31,29,26,0.06)] transition duration-300 hover:-translate-y-1 hover:border-[#c7ad67]"
-                  >
-                    <div className="relative aspect-[4/5] overflow-hidden bg-[#ece8df]">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        onError={(event) => {
-                          event.currentTarget.onerror = null;
-                          event.currentTarget.src = pendantNecklace;
-                        }}
-                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                      />
-                      <div className={`absolute left-3 top-3 rounded-[4px] px-3 py-1 text-xs font-semibold backdrop-blur ${
-                        productUnavailable ? "bg-[#8b2f2f] text-white" : "bg-white/92 text-[#5c4a27]"
-                      }`}>
-                        {product.stock || "In stock"}
+                    <article
+                      key={product.id}
+                      className="group flex min-h-full flex-col overflow-hidden rounded-[8px] border border-[#e2ddd3] bg-white shadow-[0_16px_34px_rgba(31,29,26,0.06)] transition duration-300 hover:-translate-y-1 hover:border-[#c7ad67]"
+                    >
+                      <div className="relative aspect-[4/5] overflow-hidden bg-[#ece8df]">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = pendantNecklace;
+                          }}
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                        />
+                        <div className={`absolute left-3 top-3 rounded-[4px] px-3 py-1 text-xs font-semibold backdrop-blur ${
+                          productUnavailable ? "bg-[#8b2f2f] text-white" : "bg-white/92 text-[#5c4a27]"
+                        }`}>
+                          {product.stock || "In stock"}
+                        </div>
+                        {product.offerLabel ? (
+                          <div className="absolute right-3 top-3 rounded-[4px] bg-[#1f211d] px-3 py-1 text-xs font-black uppercase text-[#e6c878] shadow-[0_10px_28px_rgba(31,29,26,0.22)]">
+                            {product.offerLabel}
+                          </div>
+                        ) : null}
                       </div>
-                    </div>
-                    <div className="flex flex-1 flex-col gap-4 p-5">
-                      <div>
-                        <p className="text-xs font-bold uppercase text-[#8c6b2f]">
-                          {product.category || product.metal}
-                        </p>
-                        <h3 className="mt-2 font-serif text-[26px] font-semibold leading-tight text-[#20201d]">
-                          {product.name}
-                        </h3>
+                      <div className="flex flex-1 flex-col gap-4 p-5">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-normal text-[#8c6b2f]">
+                            {product.category || product.metal}
+                          </p>
+                          <h3 className="mt-2 font-serif text-[24px] font-semibold leading-tight text-[#20201d]">
+                            {product.name}
+                          </h3>
+                        </div>
+                        <p className="line-clamp-3 text-sm leading-6 text-[#626057]">{product.description}</p>
+                        <div className="mt-auto border-t border-[#eee7db] pt-4">
+                          {product.originalPrice ? (
+                            <p className="text-sm font-semibold text-[#938b7c] line-through">
+                              {formatPrice(product.originalPrice)}
+                            </p>
+                          ) : null}
+                          <p className="text-xl font-black text-[#1f1d1a]">{formatPrice(product.price)}</p>
+                          <p className="mt-1 text-xs text-[#77736a]">
+                            {[product.metal, product.weight].filter(Boolean).join(" | ")}
+                          </p>
+                          {product.offerText ? (
+                            <p className="mt-2 text-xs font-semibold leading-5 text-[#8c6b2f]">
+                              {product.offerText}
+                            </p>
+                          ) : null}
+                          {quantityInCart > 0 ? (
+                            <div className="mt-4 grid min-h-11 grid-cols-[44px_1fr_44px] overflow-hidden rounded-[6px] border border-[#1f211d]">
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(product.id, -1)}
+                                className="flex items-center justify-center bg-white text-[#1f211d] transition hover:bg-[#f5efe2]"
+                                aria-label={`Decrease ${product.name}`}
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <div className="flex items-center justify-center bg-[#1f211d] px-3 text-xs font-black uppercase text-white">
+                                {quantityInCart} selected
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => addToCart(product)}
+                                disabled={!canIncreaseProduct}
+                                className="flex items-center justify-center bg-white text-[#1f211d] transition hover:bg-[#f5efe2] disabled:cursor-not-allowed disabled:text-[#b9b0a2]"
+                                aria-label={`Increase ${product.name}`}
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => addToCart(product)}
+                              disabled={productUnavailable}
+                              className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1f211d] px-4 text-xs font-black uppercase text-white transition hover:bg-[#8c6b2f] disabled:cursor-not-allowed disabled:bg-[#d7d1c6] disabled:text-[#80786b]"
+                            >
+                              <ShoppingBag size={16} />
+                              {productUnavailable ? "Sold out" : "Add to cart"}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <p className="line-clamp-3 text-sm leading-6 text-[#626057]">{product.description}</p>
-                      <div className="mt-auto border-t border-[#eee7db] pt-4">
-                        <p className="text-xl font-black text-[#1f1d1a]">{formatPrice(product.price)}</p>
-                        <p className="mt-1 text-xs text-[#77736a]">
-                          {[product.metal, product.weight].filter(Boolean).join(" | ")}
-                        </p>
-                        <button
-                          onClick={() => addToCart(product)}
-                          disabled={productUnavailable}
-                          className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1f211d] px-4 text-xs font-black uppercase text-white transition hover:bg-[#8c6b2f] disabled:cursor-not-allowed disabled:bg-[#d7d1c6] disabled:text-[#80786b]"
-                        >
-                          <ShoppingBag size={16} />
-                          {productUnavailable ? "Sold out" : "Add to cart"}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
+                    </article>
                   );
                 })}
               </div>
@@ -783,56 +859,74 @@ export default function Home() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3">
-                  <input
-                    value={customerName}
-                    onChange={(event) => setCustomerName(event.target.value)}
-                    placeholder="Your name"
-                    className="min-h-11 rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
-                  />
-                  <input
-                    value={customerPhone}
-                    onChange={(event) => setCustomerPhone(event.target.value)}
-                    placeholder="Phone / WhatsApp"
-                    className="min-h-11 rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
-                  />
-                  <label className="flex min-h-11 items-center gap-3 rounded-[6px] border border-white/15 bg-white/5 px-3 focus-within:border-[#e6c878]">
-                    <Mail size={16} className="shrink-0 text-white/45" />
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-normal text-[#e6c878]">Customer name</span>
                     <input
-                      value={customerEmail}
-                      onChange={(event) => setCustomerEmail(event.target.value)}
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      maxLength={254}
-                      placeholder="Email for updates (optional)"
-                      className="min-h-10 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+                      value={customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
+                      placeholder="Full name"
+                      className="mt-2 min-h-11 w-full rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
                     />
                   </label>
-                  <textarea
-                    value={customerAddress}
-                    onChange={(event) => setCustomerAddress(event.target.value)}
-                    placeholder="Delivery address"
-                    rows={3}
-                    className="min-h-24 resize-none rounded-[6px] border border-white/15 bg-white/5 px-3 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
-                  />
-                  <input
-                    value={paymentRef}
-                    onChange={(event) => setPaymentRef(event.target.value)}
-                    placeholder="UPI transaction ID"
-                    className="min-h-11 rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
-                  />
-                  <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white transition hover:border-[#e6c878]">
-                    <ImageUp size={16} className="shrink-0 text-white/45" />
-                    <span className="min-w-0 flex-1 truncate text-white/70">
-                      {paymentProofFile ? paymentProofFile.name : "Upload payment screenshot"}
-                    </span>
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-normal text-[#e6c878]">Phone / WhatsApp</span>
                     <input
-                      key={proofInputKey}
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => selectPaymentProof(event.target.files?.[0] || null)}
-                      className="sr-only"
+                      value={customerPhone}
+                      onChange={(event) => setCustomerPhone(event.target.value)}
+                      placeholder="Active contact number"
+                      className="mt-2 min-h-11 w-full rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
                     />
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-normal text-[#e6c878]">Email updates</span>
+                    <span className="mt-2 flex min-h-11 items-center gap-3 rounded-[6px] border border-white/15 bg-white/5 px-3 focus-within:border-[#e6c878]">
+                      <Mail size={16} className="shrink-0 text-white/45" />
+                      <input
+                        value={customerEmail}
+                        onChange={(event) => setCustomerEmail(event.target.value)}
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        maxLength={254}
+                        placeholder="Optional"
+                        className="min-h-10 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+                      />
+                    </span>
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-normal text-[#e6c878]">Delivery address</span>
+                    <textarea
+                      value={customerAddress}
+                      onChange={(event) => setCustomerAddress(event.target.value)}
+                      placeholder="Full delivery address"
+                      rows={3}
+                      className="mt-2 min-h-24 w-full resize-none rounded-[6px] border border-white/15 bg-white/5 px-3 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-normal text-[#e6c878]">UPI transaction ID</span>
+                    <input
+                      value={paymentRef}
+                      onChange={(event) => setPaymentRef(event.target.value)}
+                      placeholder="Paste transaction ID"
+                      className="mt-2 min-h-11 w-full rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e6c878]"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-normal text-[#e6c878]">Payment screenshot</span>
+                    <span className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-[6px] border border-white/15 bg-white/5 px-3 text-sm text-white transition hover:border-[#e6c878]">
+                      <ImageUp size={16} className="shrink-0 text-white/45" />
+                      <span className="min-w-0 flex-1 truncate text-white/70">
+                        {paymentProofFile ? paymentProofFile.name : "Upload image"}
+                      </span>
+                      <input
+                        key={proofInputKey}
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => selectPaymentProof(event.target.files?.[0] || null)}
+                        className="sr-only"
+                      />
+                    </span>
                   </label>
                 </div>
                 {canPay ? (
@@ -846,7 +940,7 @@ export default function Home() {
                       />
                     ) : (
                       <div className="mx-auto flex aspect-square w-full max-w-[220px] items-center justify-center rounded-[6px] border border-dashed border-[#c9bea8] bg-[#fbfaf6] p-5 text-sm leading-6 text-[#626057]">
-                        QR could not load. Use Pay button below.
+                        QR could not load. Refresh and try again.
                       </div>
                     )}
                     <p className="mt-3 text-xs font-bold uppercase text-[#8c6b2f]">

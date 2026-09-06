@@ -20,6 +20,9 @@ const emptyProduct: InventoryPayload["product"] = {
   image: "",
   description: "",
   stock: "In stock",
+  originalPrice: "",
+  offerLabel: "",
+  offerText: "",
 };
 
 export default function Admin() {
@@ -171,10 +174,16 @@ export default function Admin() {
                     ["metal", "Metal / material"],
                     ["weight", "Weight"],
                     ["price", "Price"],
+                    ["originalPrice", "Original price / MRP"],
+                    ["offerLabel", "Offer badge"],
                     ["image", "Image URL"],
                     ["stock", "Stock status"],
+                    ["offerText", "Offer line"],
                   ].map(([field, label]) => (
-                    <label key={field} className={field === "image" ? "md:col-span-2" : ""}>
+                    <label
+                      key={field}
+                      className={field === "image" || field === "offerText" ? "md:col-span-2" : ""}
+                    >
                       <span className="text-xs font-bold uppercase text-[#806b45]">{label}</span>
                       <input
                         value={String(product[field as keyof InventoryPayload["product"]] || "")}
@@ -210,6 +219,7 @@ export default function Admin() {
                 <p className="text-xs font-bold uppercase text-[#9d7a31]">Required setup</p>
                 <div className="mt-4 space-y-4 text-sm leading-6 text-[#6a5d4c]">
                   <p>Products are saved to the Google Sheet through Apps Script.</p>
+                  <p>Offer badge, offer line, and MRP are optional. After setup, edit those columns in the sheet for quick offer changes.</p>
                   <p>Use hosted image URLs from Netlify assets, Google Drive direct image links, Cloudinary, or any public CDN.</p>
                   <p>After saving, refresh the storefront once the published sheet updates.</p>
                 </div>

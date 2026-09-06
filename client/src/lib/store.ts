@@ -10,6 +10,9 @@ export type StoreProduct = {
   image: string;
   category?: string;
   stock?: string;
+  originalPrice?: string;
+  offerLabel?: string;
+  offerText?: string;
 };
 
 export type CartItem = StoreProduct & {
@@ -130,6 +133,9 @@ export function productsFromCsv(csv: string): StoreProduct[] {
         image: normalizeImageUrl(entry.image || entry.image_url || entry.photo || "") || pendantNecklace,
         category: normalizeCategory(entry.category || "Jewellery"),
         stock: normalizeStock(entry.stock || entry.available || "In stock"),
+        originalPrice: entry.originalprice || entry.original_price || entry.mrp || "",
+        offerLabel: entry.offerlabel || entry.offer_label || entry.discount || entry.off || "",
+        offerText: entry.offertext || entry.offer_text || entry.offer || "",
       };
     })
     .filter((product) => product.name && product.image);
