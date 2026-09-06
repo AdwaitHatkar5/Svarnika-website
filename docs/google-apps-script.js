@@ -146,7 +146,7 @@ function savePaymentProof_(order) {
 }
 
 function saveOrder_(order) {
-  const proof = savePaymentProof_(order);
+  const proof = savePaymentProofSafely_(order);
   const sheet = getSheet_(ORDERS_SHEET_NAME, [
     "createdAt",
     "orderId",
@@ -186,7 +186,7 @@ function saveOrder_(order) {
     upiId: order.upiId || "",
     total: order.total || "",
     items: itemsText,
-    status: "Payment proof received",
+    status: proof.error ? "Payment proof upload failed" : "Payment proof received",
     shipmentId: "",
     shipmentCompanyLink: "",
   });
@@ -221,6 +221,7 @@ function saveOrder_(order) {
         "</p>" +
         "<p><b>Payment Proof:</b> " +
         proofLinkHtml_(proof.url || order.paymentProofUrl || "") +
+        (proof.error ? "<br><b>Proof upload error:</b> " + escapeHtml_(proof.error) : "") +
         "</p>" +
         "<p><b>Total:</b> INR " +
         escapeHtml_(String(order.total || "")) +
@@ -247,6 +248,19 @@ function saveOrder_(order) {
   }
 
   return json_({ ok: true });
+}
+
+function savePaymentProofSafely_(order) {
+  try {
+    return savePaymentProof_(order);
+  } catch (error) {
+    return {
+      id: "",
+      url: "",
+      name: order.paymentProofFile ? order.paymentProofFile.name || "" : "",
+      error: error && error.message ? error.message : String(error),
+    };
+  }
 }
 
 function lookupTracking_(orderId, callback) {
@@ -602,6 +616,11 @@ function healthCheck_() {
     orderHeaders: orderStats.headers,
     timestamp: new Date().toISOString(),
   });
+}
+
+function authorizeDriveAccess_() {
+  const folder = getPaymentProofFolder_();
+  return "Drive access ready: " + folder.getName();
 }
 
 function ensureRequiredSheets_() {

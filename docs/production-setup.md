@@ -98,6 +98,8 @@ Admin supports:
 
 After updating `docs/google-apps-script.js`, redeploy the Apps Script once so the new inventory, order update, and invoice-support fields are available.
 
+For private payment screenshot upload, open Apps Script, select `authorizeDriveAccess_`, click Run, and approve Drive access once. Without this, live orders with screenshot upload will fail at the Drive upload step.
+
 ## Netlify Deploy Settings
 
 Use these settings:
