@@ -618,7 +618,7 @@ function healthCheck_() {
   });
 }
 
-function authorizeDriveAccess_() {
+function authorizeDriveAccess() {
   const folder = getPaymentProofFolder_();
   return "Drive access ready: " + folder.getName();
 }
