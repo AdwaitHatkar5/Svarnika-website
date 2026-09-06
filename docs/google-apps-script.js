@@ -10,6 +10,14 @@ function doGet(e) {
     return lookupTracking_(e.parameter.orderId || "", e.parameter.callback || "");
   }
 
+  if (e && e.parameter && e.parameter.action === "orders") {
+    return listOrders_(
+      e.parameter.token || "",
+      e.parameter.limit || 10,
+      e.parameter.callback || "",
+    );
+  }
+
   return healthCheck_();
 }
 
@@ -31,11 +39,15 @@ function doPost(e) {
   }
 
   if (payload.action === "orders") {
-    return listOrders_(payload.token || "", payload.limit || 10);
+    return listOrders_(payload.token || "", payload.limit || 10, "");
   }
 
   if (payload.action === "inventory") {
     return saveInventory_(payload.product);
+  }
+
+  if (payload.action === "updateOrder") {
+    return updateOrder_(payload);
   }
 
   if (payload.action === "order") {
@@ -83,7 +95,7 @@ function saveInventory_(product) {
     "stock",
   ]);
 
-  appendObjectRow_(sheet, {
+  const rowData = {
     id: product.id || new Date().getTime(),
     name: product.name || "",
     category: product.category || "",
@@ -96,7 +108,9 @@ function saveInventory_(product) {
     image: product.image || "",
     description: product.description || "",
     stock: product.stock || "In stock",
-  });
+  };
+
+  upsertObjectRowByKey_(sheet, "id", rowData);
 
   return json_({ ok: true });
 }
@@ -300,20 +314,75 @@ function lookupTracking_(orderId, callback) {
   return jsonOrJsonp_({ ok: true, found: false }, callback);
 }
 
-function listOrders_(token, limit) {
-  const expectedToken = PropertiesService.getScriptProperties().getProperty(
-    ORDER_READ_TOKEN_PROPERTY,
-  );
+function updateOrder_(payload) {
+  const authError = validateOrderToken_(payload.token || "");
 
-  if (!expectedToken) {
-    return json_({
-      ok: false,
-      error: "ORDER_READ_TOKEN script property is not set",
-    });
+  if (authError) {
+    return json_(authError);
   }
 
-  if (!token || token !== expectedToken) {
-    return json_({ ok: false, error: "Unauthorized" });
+  const orderId = String(payload.orderId || "").trim();
+
+  if (!orderId) {
+    return json_({ ok: false, error: "Missing orderId" });
+  }
+
+  const sheet = getSheet_(ORDERS_SHEET_NAME, [
+    "createdAt",
+    "orderId",
+    "customerName",
+    "customerEmail",
+    "customerPhone",
+    "customerAddress",
+    "paymentRef",
+    "paymentProofUrl",
+    "paymentProofFileId",
+    "paymentProofFileName",
+    "upiId",
+    "total",
+    "items",
+    "status",
+    "shipmentId",
+    "shipmentCompanyLink",
+  ]);
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+
+  if (values.length < 2) {
+    return json_({ ok: false, error: "Order not found" });
+  }
+
+  const headers = values[0].map(function (header) {
+    return String(header).trim();
+  });
+  const orderIdColumn = headers.indexOf("orderId");
+
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex += 1) {
+    const currentOrderId = String(values[rowIndex][orderIdColumn] || "").trim();
+
+    if (currentOrderId === orderId) {
+      setCellByHeader_(sheet, headers, rowIndex + 1, "status", payload.status || "");
+      setCellByHeader_(sheet, headers, rowIndex + 1, "shipmentId", payload.shipmentId || "");
+      setCellByHeader_(
+        sheet,
+        headers,
+        rowIndex + 1,
+        "shipmentCompanyLink",
+        payload.shipmentCompanyLink || "",
+      );
+
+      return json_({ ok: true });
+    }
+  }
+
+  return json_({ ok: false, error: "Order not found" });
+}
+
+function listOrders_(token, limit, callback) {
+  const authError = validateOrderToken_(token);
+
+  if (authError) {
+    return jsonOrJsonp_(authError, callback);
   }
 
   const sheet = getSheet_(ORDERS_SHEET_NAME, [
@@ -337,7 +406,7 @@ function listOrders_(token, limit) {
   const values = sheet.getDataRange().getValues();
 
   if (values.length < 2) {
-    return json_({ ok: true, rowCount: 0, orders: [] });
+    return jsonOrJsonp_({ ok: true, rowCount: 0, orders: [] }, callback);
   }
 
   const headers = values[0].map(function (header) {
@@ -371,12 +440,34 @@ function listOrders_(token, limit) {
       };
     });
 
-  return json_({
-    ok: true,
-    rowCount: values.length - 1,
-    returned: orders.length,
-    orders: orders,
-  });
+  return jsonOrJsonp_(
+    {
+      ok: true,
+      rowCount: values.length - 1,
+      returned: orders.length,
+      orders: orders,
+    },
+    callback,
+  );
+}
+
+function validateOrderToken_(token) {
+  const expectedToken = PropertiesService.getScriptProperties().getProperty(
+    ORDER_READ_TOKEN_PROPERTY,
+  );
+
+  if (!expectedToken) {
+    return {
+      ok: false,
+      error: "ORDER_READ_TOKEN script property is not set",
+    };
+  }
+
+  if (!token || token !== expectedToken) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  return null;
 }
 
 function getSheet_(name, headers) {
@@ -422,6 +513,48 @@ function appendObjectRow_(sheet, rowData) {
   });
 
   sheet.appendRow(row);
+}
+
+function upsertObjectRowByKey_(sheet, keyHeader, rowData) {
+  const headers = sheet
+    .getRange(1, 1, 1, sheet.getLastColumn())
+    .getValues()[0]
+    .map(function (header) {
+      return String(header).trim();
+    });
+  const keyColumn = headers.indexOf(keyHeader);
+  const keyValue = String(rowData[keyHeader] || "").trim();
+  const row = headers.map(function (header) {
+    return rowData[header] === undefined ? "" : rowData[header];
+  });
+
+  if (keyColumn === -1 || !keyValue || sheet.getLastRow() < 2) {
+    sheet.appendRow(row);
+    return;
+  }
+
+  const values = sheet.getDataRange().getValues();
+
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex += 1) {
+    const currentKey = String(values[rowIndex][keyColumn] || "").trim();
+
+    if (currentKey === keyValue) {
+      sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([row]);
+      return;
+    }
+  }
+
+  sheet.appendRow(row);
+}
+
+function setCellByHeader_(sheet, headers, rowNumber, header, value) {
+  const columnIndex = headers.indexOf(header);
+
+  if (columnIndex === -1) {
+    return;
+  }
+
+  sheet.getRange(rowNumber, columnIndex + 1).setValue(value);
 }
 
 function rowToObject_(headers, row) {

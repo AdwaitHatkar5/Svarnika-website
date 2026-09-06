@@ -50,6 +50,15 @@ export type InventoryPayload = {
   };
 };
 
+export type OrderUpdatePayload = {
+  action: "updateOrder";
+  token: string;
+  orderId: string;
+  status?: string;
+  shipmentId?: string;
+  shipmentCompanyLink?: string;
+};
+
 export type TrackingResponse = {
   ok: boolean;
   found?: boolean;
@@ -58,6 +67,33 @@ export type TrackingResponse = {
   trackingNumber?: string;
   trackingUrl?: string;
   error?: string;
+};
+
+export type AdminOrder = {
+  createdAt: string;
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerAddress: string;
+  paymentRef: string;
+  paymentProofUrl: string;
+  paymentProofFileId: string;
+  paymentProofFileName: string;
+  upiId: string;
+  total: string | number;
+  items: string;
+  status: string;
+  shipmentId: string;
+  shipmentCompanyLink: string;
+};
+
+export type OrdersResponse = {
+  ok: boolean;
+  error?: string;
+  rowCount?: number;
+  returned?: number;
+  orders?: AdminOrder[];
 };
 
 export const currency = new Intl.NumberFormat("en-IN", {
@@ -199,7 +235,7 @@ export function createOrderId() {
 
 export function postToGoogleScript(
   scriptUrl: string,
-  payload: CheckoutPayload | InventoryPayload,
+  payload: CheckoutPayload | InventoryPayload | OrderUpdatePayload,
 ) {
   const body = new URLSearchParams({
     payload: JSON.stringify(payload),
@@ -215,20 +251,25 @@ export function postToGoogleScript(
   });
 }
 
-export function fetchTrackingByOrderId(scriptUrl: string, orderId: string) {
-  const callbackName = `__svarnikaaTracking_${Date.now()}_${Math.random()
+function fetchGoogleScriptJsonp<T>(
+  scriptUrl: string,
+  params: Record<string, string | number>,
+  timeoutMs = 10000,
+) {
+  const callbackName = `__svarnikaaJsonp_${Date.now()}_${Math.random()
     .toString(36)
     .slice(2)}`;
 
   const url = new URL(scriptUrl);
-  url.searchParams.set("action", "tracking");
-  url.searchParams.set("orderId", orderId);
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, String(value));
+  });
   url.searchParams.set("callback", callbackName);
 
-  return new Promise<TrackingResponse>((resolve, reject) => {
+  return new Promise<T>((resolve, reject) => {
     const script = document.createElement("script");
     const callbacks = window as typeof window &
-      Record<string, (response: TrackingResponse) => void>;
+      Record<string, (response: T) => void>;
 
     function cleanup() {
       window.clearTimeout(timeoutId);
@@ -238,20 +279,35 @@ export function fetchTrackingByOrderId(scriptUrl: string, orderId: string) {
 
     const timeoutId = window.setTimeout(() => {
       cleanup();
-      reject(new Error("Tracking lookup timed out"));
-    }, 10000);
+      reject(new Error("Google Script request timed out"));
+    }, timeoutMs);
 
-    callbacks[callbackName] = (response: TrackingResponse) => {
+    callbacks[callbackName] = (response: T) => {
       cleanup();
       resolve(response);
     };
 
     script.onerror = () => {
       cleanup();
-      reject(new Error("Tracking lookup failed"));
+      reject(new Error("Google Script request failed"));
     };
 
     script.src = url.toString();
     document.body.appendChild(script);
+  });
+}
+
+export function fetchTrackingByOrderId(scriptUrl: string, orderId: string) {
+  return fetchGoogleScriptJsonp<TrackingResponse>(scriptUrl, {
+    action: "tracking",
+    orderId,
+  });
+}
+
+export function fetchAdminOrders(scriptUrl: string, token: string, limit = 25) {
+  return fetchGoogleScriptJsonp<OrdersResponse>(scriptUrl, {
+    action: "orders",
+    token,
+    limit,
   });
 }
