@@ -47,6 +47,11 @@ export type InventoryPayload = {
   action: "inventory";
   product: Omit<StoreProduct, "id"> & {
     id?: number | string;
+    imageFile?: {
+      name: string;
+      mimeType: string;
+      data: string;
+    };
   };
 };
 

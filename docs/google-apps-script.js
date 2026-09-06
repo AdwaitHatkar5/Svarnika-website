@@ -4,6 +4,7 @@ const OWNER_EMAIL_PROPERTY = "OWNER_EMAIL";
 const ORDER_READ_TOKEN_PROPERTY = "ORDER_READ_TOKEN";
 const PAYMENT_PROOF_FOLDER_ID_PROPERTY = "PAYMENT_PROOF_FOLDER_ID";
 const PAYMENT_PROOF_FOLDER_NAME = "Svarnikaa Payment Proofs";
+const INVENTORY_IMAGE_FOLDER_NAME = "Inventory";
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === "tracking") {
@@ -94,6 +95,7 @@ function saveInventory_(product) {
     "description",
     "stock",
   ]);
+  const uploadedImage = saveInventoryImageSafely_(product);
 
   const rowData = {
     id: product.id || new Date().getTime(),
@@ -105,7 +107,7 @@ function saveInventory_(product) {
     originalPrice: product.originalPrice || "",
     offerLabel: product.offerLabel || "",
     offerText: product.offerText || "",
-    image: product.image || "",
+    image: uploadedImage.url || product.image || "",
     description: product.description || "",
     stock: product.stock || "In stock",
   };
@@ -113,6 +115,46 @@ function saveInventory_(product) {
   upsertObjectRowByKey_(sheet, "id", rowData);
 
   return json_({ ok: true });
+}
+
+function saveInventoryImageSafely_(product) {
+  try {
+    return saveInventoryImage_(product);
+  } catch (error) {
+    return {
+      id: "",
+      url: "",
+      name: product && product.imageFile ? product.imageFile.name || "" : "",
+      error: error && error.message ? error.message : String(error),
+    };
+  }
+}
+
+function saveInventoryImage_(product) {
+  const imageFile = product.imageFile;
+
+  if (!imageFile || !imageFile.data) {
+    return { id: "", url: "", name: "" };
+  }
+
+  const safeName = sanitizeFileName_(
+    (product.id || new Date().getTime()) + "-" + (imageFile.name || "inventory-image.jpg"),
+  );
+  const mimeType = imageFile.mimeType || "image/jpeg";
+  const blob = Utilities.newBlob(
+    Utilities.base64Decode(imageFile.data),
+    mimeType,
+    safeName,
+  );
+  const folder = getInventoryImageFolder_();
+  const file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return {
+    id: file.getId(),
+    url: "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w1200",
+    name: file.getName(),
+  };
 }
 
 function savePaymentProof_(order) {
@@ -619,8 +661,14 @@ function healthCheck_() {
 }
 
 function authorizeDriveAccess() {
-  const folder = getPaymentProofFolder_();
-  return "Drive access ready: " + folder.getName();
+  const paymentFolder = getPaymentProofFolder_();
+  const inventoryFolder = getInventoryImageFolder_();
+  return (
+    "Drive access ready: " +
+    paymentFolder.getName() +
+    " / " +
+    inventoryFolder.getName()
+  );
 }
 
 function ensureRequiredSheets_() {
@@ -725,6 +773,15 @@ function getPaymentProofFolder_() {
 
   properties.setProperty(PAYMENT_PROOF_FOLDER_ID_PROPERTY, folder.getId());
   return folder;
+}
+
+function getInventoryImageFolder_() {
+  const parentFolder = getPaymentProofFolder_();
+  const folders = parentFolder.getFoldersByName(INVENTORY_IMAGE_FOLDER_NAME);
+
+  return folders.hasNext()
+    ? folders.next()
+    : parentFolder.createFolder(INVENTORY_IMAGE_FOLDER_NAME);
 }
 
 function sanitizeFileName_(value) {

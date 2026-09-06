@@ -36,6 +36,7 @@ const DEFAULT_ORDER_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwrVQRRaGE6gOiGWmv4OVsx4JgvB30El7QKRVZxvMCrCbP0q8qoUMANdncrzJW585WX/exec";
 const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
 const ORDER_TOKEN_STORAGE_KEY = "svarnikaa-admin-order-token";
+const MAX_INVENTORY_IMAGE_BYTES = 4 * 1024 * 1024;
 
 const company = {
   name: "SVARNIKAA JEWELS",
@@ -140,6 +141,18 @@ function escapeHtml(value: string | number) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function readFileAsBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve(result.includes(",") ? result.split(",")[1] : result);
+    };
+    reader.onerror = () => reject(new Error("File could not be read"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function invoiceBlock(order: AdminOrder, index: number, compact = false) {
@@ -301,6 +314,7 @@ export default function Admin() {
   const [unlocked, setUnlocked] = useState(!ADMIN_PIN);
   const [activeTab, setActiveTab] = useState<AdminTab>("orders");
   const [product, setProduct] = useState(emptyProduct);
+  const [inventoryImageFile, setInventoryImageFile] = useState<File | null>(null);
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [productQuery, setProductQuery] = useState("");
   const [inventoryStatus, setInventoryStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -317,10 +331,10 @@ export default function Admin() {
       Boolean(
         product.name.trim() &&
           product.price.trim() &&
-          product.image.trim() &&
+          (product.image.trim() || inventoryImageFile) &&
           product.category?.trim(),
       ),
-    [product],
+    [inventoryImageFile, product],
   );
 
   const selectedOrders = useMemo(
@@ -350,6 +364,33 @@ export default function Admin() {
       ...current,
       [field]: value,
     }));
+  }
+
+  function selectInventoryImage(file: File | null) {
+    if (!file) {
+      setInventoryImageFile(null);
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Image needed",
+        description: "Upload a product image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > MAX_INVENTORY_IMAGE_BYTES) {
+      toast({
+        title: "Image too large",
+        description: "Keep inventory images under 4 MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setInventoryImageFile(file);
   }
 
   function unlock(event: FormEvent<HTMLFormElement>) {
@@ -449,7 +490,7 @@ export default function Admin() {
     if (!canSave) {
       toast({
         title: "Required fields missing",
-        description: "Name, category, price, and image URL are required.",
+        description: "Name, category, price, and either image URL or image upload are required.",
         variant: "destructive",
       });
       return;
@@ -458,19 +499,32 @@ export default function Admin() {
     setSaving(true);
 
     try {
+      const productPayload: InventoryPayload["product"] = {
+        ...product,
+        id: product.id || Date.now(),
+        stock: product.stock || "In stock",
+      };
+
+      if (inventoryImageFile) {
+        productPayload.imageFile = {
+          name: inventoryImageFile.name,
+          mimeType: inventoryImageFile.type || "image/jpeg",
+          data: await readFileAsBase64(inventoryImageFile),
+        };
+      }
+
       await postToGoogleScript(ORDER_SCRIPT_URL, {
         action: "inventory",
-        product: {
-          ...product,
-          id: product.id || Date.now(),
-          stock: product.stock || "In stock",
-        },
+        product: productPayload,
       });
 
       setProduct(emptyProduct);
+      setInventoryImageFile(null);
       toast({
         title: "Inventory sent",
-        description: "Product is saved by ID. Refresh inventory after the sheet updates.",
+        description: inventoryImageFile
+          ? "Product image was sent to Drive Inventory folder."
+          : "Product is saved by ID. Refresh inventory after the sheet updates.",
       });
     } catch {
       toast({
@@ -484,6 +538,7 @@ export default function Admin() {
   }
 
   function editProduct(item: StoreProduct) {
+    setInventoryImageFile(null);
     setProduct({
       id: item.id,
       name: item.name || "",
@@ -783,7 +838,10 @@ export default function Admin() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setProduct(emptyProduct)}
+                        onClick={() => {
+                          setProduct(emptyProduct);
+                          setInventoryImageFile(null);
+                        }}
                         className="rounded-[6px] border border-[#dfcfb5] px-3 py-2 text-xs font-bold uppercase text-[#5b4c3b]"
                       >
                         Clear
@@ -817,6 +875,26 @@ export default function Admin() {
                           />
                         </label>
                       ))}
+
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase text-[#806b45]">
+                          Upload inventory image
+                        </span>
+                        <span className="mt-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-[6px] border border-[#dfd2b8] bg-[#fffdf8] px-4 text-sm text-[#5b4c3b] transition hover:border-[#9d7a31]">
+                          <ImageIcon size={16} className="shrink-0 text-[#9d7a31]" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {inventoryImageFile
+                              ? inventoryImageFile.name
+                              : "Save uploaded image to Drive / Inventory"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => selectInventoryImage(event.target.files?.[0] || null)}
+                            className="sr-only"
+                          />
+                        </span>
+                      </label>
 
                       <label className="md:col-span-2">
                         <span className="text-xs font-bold uppercase text-[#806b45]">Description</span>
