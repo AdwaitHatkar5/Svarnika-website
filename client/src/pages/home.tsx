@@ -281,7 +281,7 @@ export default function Home() {
     });
   }
 
-  function updateQuantity(productId: number, direction: 1 | -1) {
+  function updateQuantity(productId: StoreProduct["id"], direction: 1 | -1) {
     setCart((current) =>
       current
         .map((item) => {
@@ -298,7 +298,7 @@ export default function Home() {
     );
   }
 
-  function removeItem(productId: number) {
+  function removeItem(productId: StoreProduct["id"]) {
     setCart((current) => current.filter((item) => item.id !== productId));
   }
 
@@ -307,7 +307,7 @@ export default function Home() {
     return stockLimit === null || item.quantity < stockLimit;
   }
 
-  function getCartQuantity(productId: number) {
+  function getCartQuantity(productId: StoreProduct["id"]) {
     return cart.find((item) => item.id === productId)?.quantity || 0;
   }
 

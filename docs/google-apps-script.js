@@ -8,6 +8,13 @@ const PAYMENT_PROOF_FOLDER_NAME = "Svarnikaa Payment Proofs";
 const INVENTORY_IMAGE_FOLDER_NAME = "Inventory";
 
 function doGet(e) {
+  const params = (e && e.parameter) || {};
+  if (params.action === "inventoryList") {
+    return listInventory_(params.token || "", params.callback || "");
+  }
+  if (params.action === "adminResult") {
+    return adminResult_(params.token || "", params.requestId || "", params.callback || "");
+  }
   if (e && e.parameter && e.parameter.action === "tracking") {
     return lookupTracking_(e.parameter.orderId || "", e.parameter.callback || "");
   }
@@ -44,12 +51,8 @@ function doPost(e) {
     return listOrders_(payload.token || "", payload.limit || 10, "");
   }
 
-  if (payload.action === "inventory") {
-    return saveInventory_(payload.product);
-  }
-
-  if (payload.action === "updateOrder") {
-    return updateOrder_(payload);
+  if (["inventory", "updateInventory", "updateOrder", "deleteInventory", "deleteOrder"].indexOf(payload.action) !== -1) {
+    return adminMutation_(payload);
   }
 
   if (payload.action === "order") {
@@ -81,7 +84,10 @@ function parsePayload_(e) {
   }
 }
 
-function saveInventory_(product) {
+function saveInventory_(product, editing) {
+  if (!product || !String(product.name || "").trim() || !String(product.category || "").trim() || !String(product.price ?? "").trim()) {
+    return json_({ ok: false, error: "Product name, category and price are required" });
+  }
   const sheet = getSheet_(INVENTORY_SHEET_NAME, [
     "id",
     "name",
@@ -96,26 +102,111 @@ function saveInventory_(product) {
     "description",
     "stock",
   ]);
+  const existing = findRowByKey_(sheet, "id", product.id);
+  if (editing && !existing) return json_({ ok: false, error: "Product no longer exists. Refresh inventory." });
+  if (!editing && existing) return json_({ ok: false, error: "Product ID already exists. Use Edit." });
   const uploadedImage = saveInventoryImageSafely_(product);
+  if (uploadedImage.error) return json_({ ok: false, error: "Image upload failed: " + uploadedImage.error });
 
   const rowData = {
-    id: product.id || new Date().getTime(),
+    id: product.id ?? new Date().getTime(),
     name: product.name || "",
     category: product.category || "",
     metal: product.metal || "",
     weight: product.weight || "",
-    price: product.price || "",
-    originalPrice: product.originalPrice || "",
+    price: product.price ?? "",
+    originalPrice: product.originalPrice ?? "",
     offerLabel: product.offerLabel || "",
     offerText: product.offerText || "",
     image: uploadedImage.url || product.image || "",
     description: product.description || "",
-    stock: product.stock || "In stock",
+    stock: product.stock ?? "In stock",
   };
 
   upsertObjectRowByKey_(sheet, "id", rowData);
 
-  return json_({ ok: true });
+  return json_({ ok: true, product: rowData });
+}
+
+function findRowByKey_(sheet, key, value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const values = sheet.getDataRange().getValues();
+  const headers = (values[0] || []).map(function (header) { return String(header).trim(); });
+  const column = headers.indexOf(key);
+  const matches = [];
+  for (let index = 1; index < values.length; index += 1) {
+    if (String(values[index][column] ?? "").trim() === String(value).trim()) matches.push(index);
+  }
+  if (matches.length > 1) throw new Error("Duplicate " + key + ". Give each record a unique ID in the sheet first.");
+  return matches.length ? { row: matches[0] + 1, headers: headers, values: values[matches[0]] } : null;
+}
+
+function listInventory_(token, callback) {
+  const authError = validateOrderToken_(token);
+  if (authError) return jsonOrJsonp_(authError, callback);
+  ensureRequiredSheets_();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(INVENTORY_SHEET_NAME);
+  const values = sheet.getDataRange().getValues();
+  const headers = values.shift().map(function (header) { return String(header).trim(); });
+  const products = values.filter(function (row) { return row.some(function (cell) { return cell !== ""; }); }).map(function (row) {
+    const entry = rowToObject_(headers, row);
+    headers.forEach(function (header) { entry[header] = String(entry[header] ?? ""); });
+    return entry;
+  });
+  return jsonOrJsonp_({ ok: true, adminVersion: 2, products: products }, callback);
+}
+
+// POST writes stay compatible with static hosting; authenticated GET only reads their receipts.
+function adminMutation_(payload) {
+  const authError = validateOrderToken_(payload.token || "");
+  if (authError) return json_(authError);
+  if (!/^[A-Za-z0-9-]{16,100}$/.test(payload.requestId || "")) return json_({ ok: false, error: "Missing valid requestId" });
+  const cache = CacheService.getScriptCache();
+  const key = "admin-result:" + payload.requestId;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const previous = cache.get(key);
+    if (previous) return json_(JSON.parse(previous));
+    let result;
+    try {
+      let response;
+      if (payload.action === "inventory" || payload.action === "updateInventory") {
+        response = saveInventory_(payload.product, payload.action === "updateInventory");
+      } else if (payload.action === "updateOrder") {
+        response = updateOrder_(payload);
+      } else {
+        response = deleteRecord_(payload);
+      }
+      result = JSON.parse(response.getContent());
+      SpreadsheetApp.flush();
+    } catch (error) {
+      result = { ok: false, error: error && error.message ? error.message : String(error) };
+    }
+    cache.put(key, JSON.stringify(result), 600);
+    return json_(result);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function adminResult_(token, requestId, callback) {
+  const authError = validateOrderToken_(token);
+  if (authError) return jsonOrJsonp_(authError, callback);
+  if (!/^[A-Za-z0-9-]{16,100}$/.test(requestId)) return jsonOrJsonp_({ ok: false, error: "Invalid requestId" }, callback);
+  const result = CacheService.getScriptCache().get("admin-result:" + requestId);
+  return jsonOrJsonp_(result ? JSON.parse(result) : { ok: false, pending: true }, callback);
+}
+
+function deleteRecord_(payload) {
+  const inventory = payload.action === "deleteInventory";
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(inventory ? INVENTORY_SHEET_NAME : ORDERS_SHEET_NAME);
+  const id = inventory ? payload.productId : payload.orderId;
+  if (id === undefined || id === null || !String(id).trim()) return json_({ ok: false, error: "Missing record ID" });
+  const found = sheet && findRowByKey_(sheet, inventory ? "id" : "orderId", id);
+  if (!found) return json_({ ok: false, error: "Record no longer exists. Refresh the list." });
+  sheet.deleteRow(found.row);
+  return json_({ ok: true, deletedId: String(id) });
 }
 
 function saveInventoryImageSafely_(product) {
@@ -402,37 +493,20 @@ function updateOrder_(payload) {
     "shipmentId",
     "shipmentCompanyLink",
   ]);
-  const dataRange = sheet.getDataRange();
-  const values = dataRange.getValues();
-
-  if (values.length < 2) {
-    return json_({ ok: false, error: "Order not found" });
+  const found = findRowByKey_(sheet, "orderId", orderId);
+  if (!found) return json_({ ok: false, error: "Order not found" });
+  if (payload.shipmentCompanyLink && !/^https?:\/\/[^\s]+$/i.test(payload.shipmentCompanyLink)) {
+    return json_({ ok: false, error: "Courier link must start with https:// or http://" });
   }
-
-  const headers = values[0].map(function (header) {
-    return String(header).trim();
+  if (payload.customerEmail && !isValidEmail_(payload.customerEmail)) return json_({ ok: false, error: "Enter a valid customer email" });
+  const editable = ["status", "shipmentId", "shipmentCompanyLink", "customerName", "customerEmail", "customerPhone", "customerAddress"];
+  editable.forEach(function (field) {
+    if (payload[field] !== undefined) found.values[found.headers.indexOf(field)] = String(payload[field]);
   });
-  const orderIdColumn = headers.indexOf("orderId");
-
-  for (let rowIndex = 1; rowIndex < values.length; rowIndex += 1) {
-    const currentOrderId = String(values[rowIndex][orderIdColumn] || "").trim();
-
-    if (currentOrderId === orderId) {
-      setCellByHeader_(sheet, headers, rowIndex + 1, "status", payload.status || "");
-      setCellByHeader_(sheet, headers, rowIndex + 1, "shipmentId", payload.shipmentId || "");
-      setCellByHeader_(
-        sheet,
-        headers,
-        rowIndex + 1,
-        "shipmentCompanyLink",
-        payload.shipmentCompanyLink || "",
-      );
-
-      return json_({ ok: true });
-    }
-  }
-
-  return json_({ ok: false, error: "Order not found" });
+  sheet.getRange(found.row, 1, 1, found.headers.length).setValues([found.values]);
+  const order = rowToObject_(found.headers, found.values);
+  order.createdAt = formatCell_(order.createdAt);
+  return json_({ ok: true, order: order });
 }
 
 function listOrders_(token, limit, callback) {
@@ -580,7 +654,7 @@ function upsertObjectRowByKey_(sheet, keyHeader, rowData) {
       return String(header).trim();
     });
   const keyColumn = headers.indexOf(keyHeader);
-  const keyValue = String(rowData[keyHeader] || "").trim();
+  const keyValue = String(rowData[keyHeader] ?? "").trim();
   const row = headers.map(function (header) {
     return rowData[header] === undefined ? "" : rowData[header];
   });
@@ -593,10 +667,13 @@ function upsertObjectRowByKey_(sheet, keyHeader, rowData) {
   const values = sheet.getDataRange().getValues();
 
   for (let rowIndex = 1; rowIndex < values.length; rowIndex += 1) {
-    const currentKey = String(values[rowIndex][keyColumn] || "").trim();
+    const currentKey = String(values[rowIndex][keyColumn] ?? "").trim();
 
     if (currentKey === keyValue) {
-      sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([row]);
+      const merged = headers.map(function (header, index) {
+        return rowData[header] === undefined ? values[rowIndex][index] : rowData[header];
+      });
+      sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([merged]);
       return;
     }
   }
@@ -616,7 +693,7 @@ function setCellByHeader_(sheet, headers, rowNumber, header, value) {
 
 function rowToObject_(headers, row) {
   return headers.reduce(function (current, header, index) {
-    current[header] = row[index] || "";
+    current[header] = row[index] ?? "";
     return current;
   }, {});
 }
@@ -650,7 +727,8 @@ function healthCheck_() {
   return json_({
     ok: true,
     service: "Svarnikaa Google Apps Script",
-    actions: ["ping", "inventory", "order", "tracking", "orders"],
+    actions: ["ping", "inventory", "updateInventory", "inventoryList", "order", "tracking", "orders", "updateOrder", "deleteInventory", "deleteOrder", "adminResult"],
+    adminVersion: 2,
     inventorySheet: INVENTORY_SHEET_NAME,
     ordersSheet: ORDERS_SHEET_NAME,
     inventoryRows: inventoryStats.dataRows,

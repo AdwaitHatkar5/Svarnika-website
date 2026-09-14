@@ -99,6 +99,30 @@ After updating `docs/google-apps-script.js`, redeploy the Apps Script once so th
 
 For private payment screenshot upload and inventory image folders, open Apps Script, select `authorizeDriveAccess`, click Run, and approve Drive access once. The script prepares `My Drive / Svarnikaa Payment Proofs` and `My Drive / Svarnikaa Payment Proofs / Inventory`.
 
+## Admin Edit and Delete Update
+
+1. Replace `Code.gs` in Google Apps Script with the complete `docs/google-apps-script.js` file.
+2. Select **Deploy > Manage deployments > Edit (pencil) > Version: New version > Deploy**. Editing the existing deployment keeps its URL unchanged.
+3. Keep the existing admin key. If the `ORDER_READ_TOKEN` script property is set, its value must match the admin PIN used to unlock the website.
+4. Run `npm run build`, then upload `dist/public` to the existing Netlify site.
+5. Open `/admin`, unlock, and check that inventory and orders load. Edit a test product, save, and refresh to confirm. Delete only test records when checking deletion.
+
+Inventory now loads directly from Apps Script in the admin panel. Product IDs are preserved and locked while editing. Give every inventory row a unique, nonempty ID; duplicate IDs are rejected before edit/delete. Customer-facing CSV updates may still take time to publish.
+
+Delete asks for confirmation and permanently removes the selected sheet row. It does not remove Drive images, send email, refund payment, or alter other inventory/order records. Order deletion also clears that order from the current invoice selection.
+
+Admin changes require a successful server receipt before the screen reports success. An outdated Apps Script deployment disables writes and shows the required setup update. A missing receipt is reported as unconfirmed; refresh before retrying.
+
+Local regression tests (isolated sheet fixtures, no customer records or email):
+
+```text
+node --test script/admin-flow.test.mjs
+npx playwright test
+npm run check
+```
+
+Browser tests use locally installed Microsoft Edge and start a temporary Vite server on port 5178 with a test-only PIN. The production PIN is not changed.
+
 ## Netlify Deploy Settings
 
 Use these settings:

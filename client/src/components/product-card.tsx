@@ -5,7 +5,7 @@ import qrPlaceholder from "@assets/stock_images/luxury_gold_qr_code__badcc23b.jp
 
 interface ProductCardProps {
   product: {
-    id: number;
+    id: number | string;
     name: string;
     metal: string;
     weight: string;

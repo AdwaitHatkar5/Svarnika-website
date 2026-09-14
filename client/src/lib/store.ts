@@ -1,7 +1,7 @@
 import pendantNecklace from "@assets/generated_images/small_diamond_emerald_pendant_necklace.png";
 
 export type StoreProduct = {
-  id: number;
+  id: number | string;
   name: string;
   metal: string;
   weight: string;
@@ -36,7 +36,7 @@ export type CheckoutPayload = {
   upiId: string;
   total: number;
   items: Array<{
-    id: number;
+    id: number | string;
     name: string;
     price: string;
     quantity: number;
@@ -62,6 +62,26 @@ export type OrderUpdatePayload = {
   status?: string;
   shipmentId?: string;
   shipmentCompanyLink?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+};
+
+export type AdminProduct = Omit<StoreProduct, "id"> & { id: string };
+export type AdminMutation =
+  | (Omit<InventoryPayload, "action"> & { action: "inventory" | "updateInventory"; token: string })
+  | OrderUpdatePayload
+  | { action: "deleteInventory"; token: string; productId: string }
+  | { action: "deleteOrder"; token: string; orderId: string };
+
+type AdminResult = {
+  ok: boolean;
+  pending?: boolean;
+  error?: string;
+  product?: AdminProduct;
+  order?: AdminOrder;
+  deletedId?: string;
 };
 
 export type TrackingResponse = {
@@ -165,7 +185,7 @@ export function productsFromCsv(csv: string): StoreProduct[] {
       }, {});
 
       return {
-        id: Number(entry.id) || index + 1,
+        id: entry.id || index + 1,
         name: entry.name || entry.product || "Untitled piece",
         metal: entry.metal || entry.material || "Gold plated",
         weight: entry.weight || "",
@@ -213,7 +233,7 @@ function normalizeStock(value: string) {
   return stock;
 }
 
-function normalizeImageUrl(value = "") {
+export function normalizeImageUrl(value = "") {
   const imageUrl = String(value).trim();
   if (!imageUrl) return "";
 
@@ -315,4 +335,45 @@ export function fetchAdminOrders(scriptUrl: string, token: string, limit = 25) {
     token,
     limit,
   });
+}
+
+export async function fetchAdminInventory(scriptUrl: string, token: string) {
+  const response = await fetchGoogleScriptJsonp<{
+    ok: boolean; error?: string; adminVersion?: number; products?: AdminProduct[];
+  }>(scriptUrl, { action: "inventoryList", token });
+  if (!response.ok) throw new Error(response.error || "Inventory could not load");
+  if (response.adminVersion !== 2 || !Array.isArray(response.products)) {
+    throw new Error("Update the Apps Script deployment to enable inventory editing and deletion.");
+  }
+  return response.products;
+}
+
+export async function mutateAdmin(scriptUrl: string, payload: AdminMutation): Promise<AdminResult> {
+  const requestId = crypto.randomUUID();
+  // An opaque POST response cannot confirm a write. Read the authenticated receipt instead.
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 45000);
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      signal: controller.signal,
+      body: new URLSearchParams({ payload: JSON.stringify({ ...payload, requestId }) }),
+    });
+  } catch {
+    // A lost POST response may still have saved; check before asking the admin to retry.
+  } finally {
+    window.clearTimeout(timeout);
+  }
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const result = await fetchGoogleScriptJsonp<AdminResult>(scriptUrl, {
+      action: "adminResult", token: payload.token, requestId,
+    });
+    if (!result.pending) {
+      if (!result.ok) throw new Error(result.error || "Change could not be saved");
+      return result;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1000));
+  }
+  throw new Error("Save confirmation was not received. Refresh the list before retrying.");
 }

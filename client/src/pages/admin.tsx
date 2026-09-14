@@ -2,13 +2,14 @@ import { Layout } from "@/components/layout";
 import { useToast } from "@/hooks/use-toast";
 import {
   AdminOrder,
+  AdminProduct,
   InventoryPayload,
-  StoreProduct,
+  fetchAdminInventory,
   fetchAdminOrders,
   formatPrice,
   parsePrice,
-  postToGoogleScript,
-  productsFromCsv,
+  mutateAdmin,
+  normalizeImageUrl,
 } from "@/lib/store";
 import {
   ArrowLeft,
@@ -26,12 +27,12 @@ import {
   Search,
   Send,
   Truck,
+  Trash2,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || "";
-const SHEET_CSV_URL = import.meta.env.VITE_GOOGLE_SHEET_CSV_URL || "";
 const DEFAULT_ORDER_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwrVQRRaGE6gOiGWmv4OVsx4JgvB30El7QKRVZxvMCrCbP0q8qoUMANdncrzJW585WX/exec";
 const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
@@ -69,7 +70,7 @@ const emptyProduct: InventoryPayload["product"] = {
 
 type AdminTab = "orders" | "inventory" | "invoice";
 type InvoiceMode = "single-customer" | "two-per-page";
-type OrderDraft = Pick<AdminOrder, "status" | "shipmentId" | "shipmentCompanyLink">;
+type OrderDraft = Pick<AdminOrder, "status" | "shipmentId" | "shipmentCompanyLink" | "customerName" | "customerEmail" | "customerPhone" | "customerAddress">;
 type InvoiceItem = {
   name: string;
   quantity: number;
@@ -77,11 +78,16 @@ type InvoiceItem = {
   total: number;
 };
 
-function cacheBust(url: string) {
-  if (!url) return "";
-  const nextUrl = new URL(url);
-  nextUrl.searchParams.set("_", String(Date.now()));
-  return nextUrl.toString();
+function orderDraft(order: AdminOrder): OrderDraft {
+  return {
+    status: order.status || "Payment proof received",
+    shipmentId: order.shipmentId || "",
+    shipmentCompanyLink: order.shipmentCompanyLink || "",
+    customerName: order.customerName || "",
+    customerEmail: order.customerEmail || "",
+    customerPhone: order.customerPhone || "",
+    customerAddress: order.customerAddress || "",
+  };
 }
 
 function formatDate(value?: string) {
@@ -375,7 +381,11 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<AdminTab>("orders");
   const [product, setProduct] = useState(emptyProduct);
   const [inventoryImageFile, setInventoryImageFile] = useState<File | null>(null);
-  const [products, setProducts] = useState<StoreProduct[]>([]);
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [adminReady, setAdminReady] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [busyRecord, setBusyRecord] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [inventoryStatus, setInventoryStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [saving, setSaving] = useState(false);
@@ -469,24 +479,22 @@ export default function Admin() {
   }
 
   async function loadInventory() {
-    if (!SHEET_CSV_URL) {
-      setInventoryStatus("error");
-      return;
-    }
-
     setInventoryStatus("loading");
+    setAdminReady(false);
 
     try {
-      const response = await fetch(cacheBust(SHEET_CSV_URL));
-      if (!response.ok) throw new Error("Inventory sheet could not load");
-      const csv = await response.text();
-      setProducts(productsFromCsv(csv));
+      const nextProducts = await fetchAdminInventory(ORDER_SCRIPT_URL, (pin || ADMIN_PIN).trim());
+      setProducts(nextProducts);
       setInventoryStatus("ready");
-    } catch {
+      setAdminReady(true);
+      setAdminError("");
+    } catch (error) {
       setInventoryStatus("error");
+      const message = `${error instanceof Error ? error.message : "Inventory could not load"}. Check the admin key and deploy the updated Apps Script.`;
+      setAdminError(message);
       toast({
         title: "Inventory not loaded",
-        description: "Check the published CSV link.",
+        description: message,
         variant: "destructive",
       });
     }
@@ -517,15 +525,12 @@ export default function Admin() {
       setOrders(nextOrders);
       setOrderDrafts(
         nextOrders.reduce<Record<string, OrderDraft>>((drafts, order) => {
-          drafts[order.orderId] = {
-            status: order.status || "Payment proof received",
-            shipmentId: order.shipmentId || "",
-            shipmentCompanyLink: order.shipmentCompanyLink || "",
-          };
+          drafts[order.orderId] = orderDraft(order);
           return drafts;
         }, {}),
       );
       setOrderStatus("ready");
+      setSelectedOrderIds((current) => current.filter((id) => nextOrders.some((order) => order.orderId === id)));
     } catch (error) {
       setOrderStatus("error");
       toast({
@@ -538,6 +543,7 @@ export default function Admin() {
 
   async function saveProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!adminReady || saving || busyRecord) return;
 
     if (!ORDER_SCRIPT_URL) {
       toast({
@@ -574,23 +580,25 @@ export default function Admin() {
         };
       }
 
-      await postToGoogleScript(ORDER_SCRIPT_URL, {
-        action: "inventory",
+      const result = await mutateAdmin(ORDER_SCRIPT_URL, {
+        action: editingId !== null ? "updateInventory" : "inventory",
+        token: (pin || ADMIN_PIN).trim(),
         product: productPayload,
       });
-
+      if (!result.product) throw new Error("Product confirmation missing. Refresh inventory before retrying.");
+      const savedProduct = { ...result.product, id: String(result.product.id) };
+      setProducts((current) => [...current.filter((item) => item.id !== savedProduct.id), savedProduct]);
       setProduct(emptyProduct);
+      setEditingId(null);
       setInventoryImageFile(null);
       toast({
-        title: "Inventory sent",
-        description: inventoryImageFile
-          ? "Product image was sent to Drive Inventory folder."
-          : "Product is saved by ID. Refresh inventory after the sheet updates.",
+        title: "Product saved",
+        description: "The inventory sheet has been updated.",
       });
-    } catch {
+    } catch (error) {
       toast({
         title: "Product could not be saved",
-        description: "Check the Apps Script deployment URL and try again.",
+        description: error instanceof Error ? error.message : "Check the connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -598,7 +606,8 @@ export default function Admin() {
     }
   }
 
-  function editProduct(item: StoreProduct) {
+  function editProduct(item: AdminProduct) {
+    setEditingId(item.id);
     setInventoryImageFile(null);
     setProduct({
       id: item.id,
@@ -622,9 +631,7 @@ export default function Admin() {
     setOrderDrafts((current) => ({
       ...current,
       [orderId]: {
-        status: current[orderId]?.status || "Payment proof received",
-        shipmentId: current[orderId]?.shipmentId || "",
-        shipmentCompanyLink: current[orderId]?.shipmentCompanyLink || "",
+        ...current[orderId],
         [field]: value,
       },
     }));
@@ -634,21 +641,51 @@ export default function Admin() {
     const draft = orderDrafts[order.orderId];
     const adminKey = pin || ADMIN_PIN;
 
-    if (!adminKey.trim() || !draft) return;
+    if (!adminReady || saving || busyRecord || !adminKey.trim() || !draft) return;
+    setBusyRecord(order.orderId);
+    try {
+      const result = await mutateAdmin(ORDER_SCRIPT_URL, {
+        action: "updateOrder", token: adminKey.trim(), orderId: order.orderId, ...draft,
+      });
+      if (!result.order) throw new Error("Order confirmation missing. Refresh orders before retrying.");
+      const savedOrder = result.order;
+      setOrders((current) => current.map((item) => item.orderId === savedOrder.orderId ? savedOrder : item));
+      setOrderDrafts((current) => ({ ...current, [savedOrder.orderId]: orderDraft(savedOrder) }));
+      toast({ title: "Order saved" });
+    } catch (error) {
+      toast({ title: "Order could not be saved", description: error instanceof Error ? error.message : "Check the connection.", variant: "destructive" });
+    } finally {
+      setBusyRecord("");
+    }
+  }
 
-    await postToGoogleScript(ORDER_SCRIPT_URL, {
-      action: "updateOrder",
-      token: adminKey.trim(),
-      orderId: order.orderId,
-      status: draft.status,
-      shipmentId: draft.shipmentId,
-      shipmentCompanyLink: draft.shipmentCompanyLink,
-    });
-
-    toast({
-      title: "Order update sent",
-      description: "Refresh orders after Apps Script updates the sheet.",
-    });
+  async function deleteRecord(kind: "inventory" | "order", id: string, name: string) {
+    if (!adminReady || saving || busyRecord) return;
+    if (!window.confirm(`Delete ${kind === "inventory" ? "product" : "order"} "${name}" (${id})? This removes the sheet record permanently. Drive files are kept.`)) return;
+    setBusyRecord(id);
+    try {
+      const result = await mutateAdmin(ORDER_SCRIPT_URL, kind === "inventory"
+        ? { action: "deleteInventory", token: (pin || ADMIN_PIN).trim(), productId: id }
+        : { action: "deleteOrder", token: (pin || ADMIN_PIN).trim(), orderId: id });
+      if (result.deletedId !== id) throw new Error("Delete confirmation missing. Refresh the list before retrying.");
+      if (kind === "inventory") {
+        setProducts((current) => current.filter((item) => item.id !== id));
+        if (editingId === id) {
+          setEditingId(null);
+          setProduct(emptyProduct);
+          setInventoryImageFile(null);
+        }
+      } else {
+        setOrders((current) => current.filter((item) => item.orderId !== id));
+        setSelectedOrderIds((current) => current.filter((value) => value !== id));
+        setOrderDrafts((current) => { const next = { ...current }; delete next[id]; return next; });
+      }
+      toast({ title: kind === "inventory" ? "Product deleted" : "Order deleted" });
+    } catch (error) {
+      toast({ title: "Delete could not be confirmed", description: error instanceof Error ? error.message : "Refresh the list before retrying.", variant: "destructive" });
+    } finally {
+      setBusyRecord("");
+    }
   }
 
   function toggleOrder(orderId: string) {
@@ -703,10 +740,11 @@ export default function Admin() {
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-[6px] border border-[#d8c5a6] text-[#9d7a31]">
                 <Lock size={20} />
               </div>
-              <label className="block text-xs font-bold uppercase text-[#806b45]">
+              <label htmlFor="admin-pin" className="block text-xs font-bold uppercase text-[#806b45]">
                 Admin PIN
               </label>
               <input
+                id="admin-pin"
                 value={pin}
                 onChange={(event) => setPin(event.target.value)}
                 type="password"
@@ -720,6 +758,9 @@ export default function Admin() {
             </form>
           ) : (
             <div className="space-y-6">
+              {adminError ? (
+                <p role="alert" className="rounded-[6px] border border-red-200 bg-red-50 p-4 text-sm text-red-800">{adminError}</p>
+              ) : null}
               <div className="grid gap-3 md:grid-cols-3">
                 {[
                   { key: "orders", label: "Orders", Icon: PackageCheck },
@@ -753,7 +794,7 @@ export default function Admin() {
                     <button
                       type="button"
                       onClick={loadOrders}
-                      disabled={orderStatus === "loading"}
+                      disabled={orderStatus === "loading" || Boolean(busyRecord) || saving}
                       className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-[6px] bg-[#3b3025] px-4 text-xs font-black uppercase text-white transition hover:bg-[#9d7a31] disabled:cursor-wait disabled:opacity-60"
                     >
                       <RefreshCw size={16} className={orderStatus === "loading" ? "animate-spin" : ""} />
@@ -774,11 +815,7 @@ export default function Admin() {
                   <div className="space-y-4">
                     {orders.length ? (
                       orders.map((order) => {
-                        const draft = orderDrafts[order.orderId] || {
-                          status: order.status || "Payment proof received",
-                          shipmentId: order.shipmentId || "",
-                          shipmentCompanyLink: order.shipmentCompanyLink || "",
-                        };
+                        const draft = orderDrafts[order.orderId] || orderDraft(order);
 
                         return (
                           <article
@@ -810,7 +847,7 @@ export default function Admin() {
                                   <p><b>Total:</b> {formatPrice(order.total || 0)}</p>
                                   <p className="md:col-span-2"><b>Address:</b> {order.customerAddress || "-"}</p>
                                   <p className="md:col-span-2"><b>Items:</b> {order.items || "-"}</p>
-                                  <p><b>UPI ID:</b> {order.paymentRef || "-"}</p>
+                                  <p><b>Payment reference:</b> {order.paymentRef || "-"}</p>
                                   <p><b>Date:</b> {order.createdAt || "-"}</p>
                                 </div>
                                 {order.paymentProofUrl ? (
@@ -826,7 +863,20 @@ export default function Admin() {
                                 ) : null}
                               </div>
 
-                              <div className="space-y-3 rounded-[6px] border border-[#eadcc1] bg-[#fffdf8] p-4">
+                              <fieldset disabled={!adminReady || Boolean(busyRecord) || saving} className="min-w-0 space-y-3 rounded-[6px] border border-[#eadcc1] bg-[#fffdf8] p-4 disabled:opacity-60">
+                                {([
+                                  ["customerName", "Customer name"],
+                                  ["customerEmail", "Customer email"],
+                                  ["customerPhone", "Customer phone"],
+                                  ["customerAddress", "Delivery address"],
+                                ] as const).map(([field, label]) => (
+                                  <label key={field} className="block">
+                                    <span className="text-xs font-bold uppercase text-[#806b45]">{label}</span>
+                                    <input value={draft[field]} type={field === "customerEmail" ? "email" : "text"}
+                                      onChange={(event) => updateOrderDraft(order.orderId, field, event.target.value)}
+                                      className="mt-2 min-h-11 w-full rounded-[6px] border border-[#dfd2b8] bg-white px-3 text-sm outline-none focus:border-[#9d7a31]" />
+                                  </label>
+                                ))}
                                 <label className="block">
                                   <span className="text-xs font-bold uppercase text-[#806b45]">Status</span>
                                   <select
@@ -834,6 +884,7 @@ export default function Admin() {
                                     onChange={(event) => updateOrderDraft(order.orderId, "status", event.target.value)}
                                     className="mt-2 min-h-11 w-full rounded-[6px] border border-[#dfd2b8] bg-white px-3 text-sm outline-none focus:border-[#9d7a31]"
                                   >
+                                    {!orderStatuses.includes(draft.status) ? <option value={draft.status}>{draft.status}</option> : null}
                                     {orderStatuses.map((status) => (
                                       <option key={status} value={status}>{status}</option>
                                     ))}
@@ -861,9 +912,13 @@ export default function Admin() {
                                   className="flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1f211d] px-4 text-xs font-black uppercase text-white transition hover:bg-[#8c6b2f]"
                                 >
                                   <Save size={16} />
-                                  Save update
+                                  {busyRecord === order.orderId ? "Saving change" : "Save update"}
                                 </button>
-                              </div>
+                                <button type="button" onClick={() => deleteRecord("order", order.orderId, order.customerName)}
+                                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] border border-red-200 px-4 text-xs font-bold text-red-700 hover:bg-red-50">
+                                  <Trash2 size={16} /> Delete order
+                                </button>
+                              </fieldset>
                             </div>
                           </article>
                         );
@@ -891,17 +946,19 @@ export default function Admin() {
                     onSubmit={saveProduct}
                     className="rounded-[8px] border border-[#dfcfb5] bg-white p-5 shadow-[0_18px_50px_rgba(64,48,29,0.08)]"
                   >
+                    <fieldset disabled={!adminReady || saving || Boolean(busyRecord)} className="min-w-0 disabled:opacity-60">
                     <div className="mb-5 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs font-bold uppercase text-[#9d7a31]">Product manager</p>
                         <h2 className="mt-2 font-serif text-3xl font-semibold text-[#30271f]">
-                          {product.id ? "Edit product" : "Add product"}
+                          {editingId !== null ? "Edit product" : "Add product"}
                         </h2>
                       </div>
                       <button
                         type="button"
                         onClick={() => {
                           setProduct(emptyProduct);
+                          setEditingId(null);
                           setInventoryImageFile(null);
                         }}
                         className="rounded-[6px] border border-[#dfcfb5] px-3 py-2 text-xs font-bold uppercase text-[#5b4c3b]"
@@ -929,6 +986,7 @@ export default function Admin() {
                         >
                           <span className="text-xs font-bold uppercase text-[#806b45]">{label}</span>
                           <input
+                            readOnly={field === "id" && editingId !== null}
                             value={String(product[field as keyof InventoryPayload["product"]] || "")}
                             onChange={(event) =>
                               updateProduct(field as keyof InventoryPayload["product"], event.target.value)
@@ -974,8 +1032,9 @@ export default function Admin() {
                       className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-[6px] bg-[#3b3025] px-4 text-xs font-black uppercase text-white transition hover:bg-[#9d7a31] disabled:cursor-wait disabled:opacity-60"
                     >
                       {saving ? <Send size={16} /> : product.id ? <Save size={16} /> : <Plus size={16} />}
-                      {saving ? "Saving product" : product.id ? "Save product" : "Add to inventory"}
+                      {saving ? "Saving product" : editingId !== null ? "Save product" : "Add to inventory"}
                     </button>
+                    </fieldset>
                   </form>
 
                   <aside className="rounded-[8px] border border-[#dfcfb5] bg-white p-5 xl:self-start">
@@ -987,6 +1046,7 @@ export default function Admin() {
                       <button
                         type="button"
                         onClick={loadInventory}
+                        disabled={saving || Boolean(busyRecord) || inventoryStatus === "loading"}
                         className="flex h-11 w-11 items-center justify-center rounded-[6px] border border-[#dfcfb5] text-[#806b45] hover:border-[#9d7a31]"
                         aria-label="Refresh inventory"
                       >
@@ -1005,7 +1065,7 @@ export default function Admin() {
                     <div className="mt-4 max-h-[620px] space-y-3 overflow-y-auto pr-1">
                       {filteredProducts.map((item) => (
                         <div key={item.id} className="grid grid-cols-[64px_1fr] gap-3 rounded-[6px] border border-[#eadcc1] bg-[#fffdf8] p-3">
-                          <img src={item.image} alt={item.name} className="h-16 w-16 rounded-[4px] object-cover" />
+                          <img src={normalizeImageUrl(item.image)} alt={item.name} className="h-16 w-16 rounded-[4px] object-cover" />
                           <div className="min-w-0">
                             <p className="truncate text-sm font-bold">{item.name}</p>
                             <p className="mt-1 text-xs text-[#6a5d4c]">{formatPrice(item.price)} · {item.stock}</p>
@@ -1013,10 +1073,17 @@ export default function Admin() {
                               <button
                                 type="button"
                                 onClick={() => editProduct(item)}
+                                disabled={!adminReady || saving || Boolean(busyRecord) || !item.id}
                                 className="inline-flex items-center gap-1 text-xs font-bold uppercase text-[#8c6b2f]"
                               >
                                 <Pencil size={13} />
                                 Edit
+                              </button>
+                              <button type="button" onClick={() => deleteRecord("inventory", item.id, item.name)}
+                                disabled={!adminReady || saving || Boolean(busyRecord) || !item.id}
+                                aria-label={`Delete product ${item.name}`} title={`Delete product ${item.name}`}
+                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] text-red-700 hover:bg-red-50 disabled:opacity-40">
+                                <Trash2 size={16} />
                               </button>
                               {item.offerLabel ? (
                                 <span className="rounded-[4px] bg-[#1f211d] px-2 py-1 text-[10px] font-bold uppercase text-[#e6c878]">
