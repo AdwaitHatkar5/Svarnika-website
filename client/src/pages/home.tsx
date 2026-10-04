@@ -35,7 +35,7 @@ const UPI_NAME = import.meta.env.VITE_UPI_NAME || "Svarnikaa";
 const DEFAULT_SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTfSPkVApqhIMHfrGEaCr-Rg7IOSjjrdAbynlIo7FIpLXdlyDIpdQxZlup0Y2tvBw51OyjQBjJP2NAR/pub?gid=0&single=true&output=csv";
 const DEFAULT_ORDER_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwrVQRRaGE6gOiGWmv4OVsx4JgvB30El7QKRVZxvMCrCbP0q8qoUMANdncrzJW585WX/exec";
+  "https://script.google.com/macros/s/AKfycbwq0_N8m3zPzakPsM-qVaV8s4W7bByLo4gf63Yy9OJ_VAic6gTBlHt_FhVfpFycvVhx/exec";
 const SHEET_CSV_URL = import.meta.env.VITE_GOOGLE_SHEET_CSV_URL || DEFAULT_SHEET_CSV_URL;
 const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
@@ -48,21 +48,6 @@ function getStockLimit(product: StoreProduct) {
 
 function isOutOfStock(product: StoreProduct) {
   return /out\s+of\s+stock/i.test(product.stock || "");
-}
-
-function isCustomerVisibleProduct(product: StoreProduct) {
-  const searchableText = [
-    product.name,
-    product.description,
-    product.category,
-    product.stock,
-    product.offerLabel,
-    product.offerText,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return !/(^|[\s-])test(?:ing)?([\s-]|$)/i.test(searchableText);
 }
 
 function withCacheBust(url: string) {
@@ -118,7 +103,7 @@ function readFileAsBase64(file: File) {
 export default function Home() {
   const { toast } = useToast();
   const [products, setProducts] = useState<StoreProduct[]>(
-    SHEET_CSV_URL ? [] : (fallbackProducts as StoreProduct[]).filter(isCustomerVisibleProduct),
+    SHEET_CSV_URL ? [] : (fallbackProducts as StoreProduct[]),
   );
   const [sheetStatus, setSheetStatus] = useState<"local" | "loading" | "live" | "error">(
     SHEET_CSV_URL ? "loading" : "local",
@@ -151,13 +136,13 @@ export default function Home() {
         return response.text();
       })
       .then((csv) => {
-        const sheetProducts = productsFromCsv(csv).filter(isCustomerVisibleProduct);
+        const sheetProducts = productsFromCsv(csv);
         if (!sheetProducts.length) throw new Error("Sheet has no products");
         setProducts(sheetProducts);
         setSheetStatus("live");
       })
       .catch(() => {
-        setProducts((fallbackProducts as StoreProduct[]).filter(isCustomerVisibleProduct));
+        setProducts(fallbackProducts as StoreProduct[]);
         setSheetStatus("error");
       });
   }, []);
@@ -210,19 +195,6 @@ export default function Home() {
       return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
   }, [activeCategory, products, query]);
-
-  const activeOffers = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          products
-            .flatMap((product) => [product.offerText, product.offerLabel])
-            .map((offer) => offer?.trim())
-            .filter((offer): offer is string => Boolean(offer)),
-        ),
-      ).slice(0, 3),
-    [products],
-  );
 
   const subtotal = useMemo(
     () =>
@@ -569,6 +541,7 @@ export default function Home() {
                 <img
                   src={category.image}
                   alt={category.name}
+                  referrerPolicy="no-referrer"
                   onError={(event) => {
                     event.currentTarget.onerror = null;
                     event.currentTarget.src = pendantNecklace;
@@ -591,29 +564,6 @@ export default function Home() {
             </div>
           )}
         </section>
-
-        {activeOffers.length ? (
-          <section className="border-y border-[#ded6c8] bg-[#fffdf8]">
-            <div className="container mx-auto grid gap-4 px-4 py-6 md:grid-cols-[220px_1fr] md:items-center md:px-6">
-              <div>
-                <p className="text-xs font-bold uppercase text-[#8c6b2f]">Current offers</p>
-                <h2 className="mt-1 font-serif text-3xl font-semibold text-[#20201d]">
-                  Live from inventory
-                </h2>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                {activeOffers.map((offer) => (
-                  <div
-                    key={offer}
-                    className="rounded-[6px] border border-[#dfd3bd] bg-white px-4 py-3 text-sm font-semibold leading-6 text-[#45392d]"
-                  >
-                    {offer}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         <div className="border-y border-[#2f332d] bg-[#1f211d] text-white">
           <div className="container mx-auto grid grid-cols-1 divide-y divide-white/10 px-4 md:grid-cols-3 md:divide-x md:divide-y-0 md:px-6">
@@ -701,6 +651,7 @@ export default function Home() {
                         <img
                           src={product.image}
                           alt={product.name}
+                          referrerPolicy="no-referrer"
                           onError={(event) => {
                             event.currentTarget.onerror = null;
                             event.currentTarget.src = pendantNecklace;
@@ -820,6 +771,7 @@ export default function Home() {
                         <img
                           src={item.image}
                           alt={item.name}
+                          referrerPolicy="no-referrer"
                           onError={(event) => {
                             event.currentTarget.onerror = null;
                             event.currentTarget.src = pendantNecklace;

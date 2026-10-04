@@ -236,13 +236,15 @@ function normalizeStock(value: string) {
 export function normalizeImageUrl(value = "") {
   const imageUrl = String(value).trim();
   if (!imageUrl) return "";
+  if (/^(?:n\/?a|none|null|undefined|-)$/i.test(imageUrl)) return "";
 
   const driveFileId =
     imageUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/)?.[1] ||
-    imageUrl.match(/[?&]id=([^&]+)/)?.[1];
+    imageUrl.match(/[?&]id=([^&]+)/)?.[1] ||
+    imageUrl.match(/lh3\.googleusercontent\.com\/d\/([^=/?]+)/)?.[1];
 
-  if (driveFileId && imageUrl.includes("drive.google.com")) {
-    return `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1200`;
+  if (driveFileId && /(?:drive\.google\.com|lh3\.googleusercontent\.com)/i.test(imageUrl)) {
+    return `https://lh3.googleusercontent.com/d/${driveFileId}=w1200`;
   }
 
   return imageUrl;

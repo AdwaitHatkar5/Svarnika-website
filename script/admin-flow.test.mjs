@@ -14,7 +14,7 @@ test("storefront preserves text and leading-zero IDs when another product is del
       builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: 'export default "/fixture.png";' }));
     } }],
   });
-  const { productsFromCsv } = await import("data:text/javascript;base64," + Buffer.from(bundled.outputFiles[0].text).toString("base64"));
+  const { productsFromCsv, normalizeImageUrl } = await import("data:text/javascript;base64," + Buffer.from(bundled.outputFiles[0].text).toString("base64"));
   const headers = "id,name,price,image\n";
   const remaining = "BR-002,Bracelet,499,/image.png\n00123,Ring,399,/ring.png";
   const before = productsFromCsv(headers + "BR-001,Necklace,599,/necklace.png\n" + remaining);
@@ -22,6 +22,15 @@ test("storefront preserves text and leading-zero IDs when another product is del
   assert.equal(before[1].id, after[0].id);
   assert.equal(after[0].id, "BR-002");
   assert.equal(after[1].id, "00123");
+  assert.equal(normalizeImageUrl("NA"), "");
+  assert.equal(
+    normalizeImageUrl("https://drive.google.com/file/d/drive-file-id/view?usp=sharing"),
+    "https://lh3.googleusercontent.com/d/drive-file-id=w1200",
+  );
+  assert.equal(
+    normalizeImageUrl("https://drive.google.com/thumbnail?id=drive-file-id&sz=w1200"),
+    "https://lh3.googleusercontent.com/d/drive-file-id=w1200",
+  );
 });
 
 test("inventory edit preserves exact IDs, zero stock, custom columns and row count", () => {

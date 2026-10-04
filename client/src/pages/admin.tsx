@@ -34,7 +34,7 @@ import { Link } from "wouter";
 
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || "";
 const DEFAULT_ORDER_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwrVQRRaGE6gOiGWmv4OVsx4JgvB30El7QKRVZxvMCrCbP0q8qoUMANdncrzJW585WX/exec";
+  "https://script.google.com/macros/s/AKfycbwq0_N8m3zPzakPsM-qVaV8s4W7bByLo4gf63Yy9OJ_VAic6gTBlHt_FhVfpFycvVhx/exec";
 const ORDER_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_ORDER_SCRIPT_URL;
 const MAX_INVENTORY_IMAGE_BYTES = 4 * 1024 * 1024;
 
@@ -88,6 +88,35 @@ function orderDraft(order: AdminOrder): OrderDraft {
     customerPhone: order.customerPhone || "",
     customerAddress: order.customerAddress || "",
   };
+}
+
+function InventoryThumbnail({ product }: { product: AdminProduct }) {
+  const source = normalizeImageUrl(product.image);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => setFailed(false), [source]);
+
+  if (!source || failed) {
+    return (
+      <div
+        role="img"
+        aria-label={`Image unavailable for ${product.name}`}
+        className="flex h-16 w-16 items-center justify-center rounded-[4px] border border-dashed border-[#d8c5a6] bg-white text-[#9d7a31]"
+      >
+        <ImageIcon size={20} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={source}
+      alt={product.name}
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+      className="h-16 w-16 rounded-[4px] object-cover"
+    />
+  );
 }
 
 function formatDate(value?: string) {
@@ -1065,7 +1094,7 @@ export default function Admin() {
                     <div className="mt-4 max-h-[620px] space-y-3 overflow-y-auto pr-1">
                       {filteredProducts.map((item) => (
                         <div key={item.id} className="grid grid-cols-[64px_1fr] gap-3 rounded-[6px] border border-[#eadcc1] bg-[#fffdf8] p-3">
-                          <img src={normalizeImageUrl(item.image)} alt={item.name} className="h-16 w-16 rounded-[4px] object-cover" />
+                          <InventoryThumbnail product={item} />
                           <div className="min-w-0">
                             <p className="truncate text-sm font-bold">{item.name}</p>
                             <p className="mt-1 text-xs text-[#6a5d4c]">{formatPrice(item.price)} · {item.stock}</p>

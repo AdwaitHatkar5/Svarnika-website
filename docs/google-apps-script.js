@@ -244,7 +244,7 @@ function saveInventoryImage_(product) {
 
   return {
     id: file.getId(),
-    url: "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w1200",
+    url: "https://lh3.googleusercontent.com/d/" + file.getId() + "=w1200",
     name: file.getName(),
   };
 }
