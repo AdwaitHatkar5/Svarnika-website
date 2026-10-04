@@ -5,6 +5,8 @@ dist
 .env
 .env.local
 .env.*.local
+.local/
+test-results/workbook-inspection.json
 server/public
 vite.config.ts.*
 *.tar.gz
